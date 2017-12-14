@@ -21,7 +21,7 @@
 ##############################################################################
 
 {'name': 'Shopware Connector',
- 'version': '8.0.3.0.0',
+ 'version': '10.0.1.0.0',
  'category': 'Connector',
  'depends': ['account',
              'product',
