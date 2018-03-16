@@ -30,6 +30,7 @@
              'connector_ecommerce',
              'product_m2mcategories',
              ],
+ 'author': 'Oliver Görtz, Serpent Consulting Services Pvt. Ltd.',
  'external_dependencies': {
      'python': ['shopware_rest'],
  },
