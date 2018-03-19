@@ -3,7 +3,7 @@ from openerp import models, fields
 
 
 class PaymentMethod(models.Model):
-    _inherit = "account.payment.mode"   #payment.method
+    _inherit = "account.payment.mode"
 
     create_invoice_on = fields.Selection(
         selection=[('open', 'Validate'),
