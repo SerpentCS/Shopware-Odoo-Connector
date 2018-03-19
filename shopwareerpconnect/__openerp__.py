@@ -28,7 +28,7 @@
              'delivery',
              'sale_stock',
              'connector_ecommerce',
-             'product_m2mcategories',
+             'product_multi_category',  # replaced by "product_m2mcategories"
              ],
  'author': 'Oliver Görtz, Serpent Consulting Services Pvt. Ltd.',
  'external_dependencies': {
