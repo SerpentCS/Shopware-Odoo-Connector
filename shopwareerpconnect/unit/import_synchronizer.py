@@ -248,13 +248,11 @@ class BatchImporter(Importer):
 
     def run(self, filters=None):
         """ Run the synchronization """
-        print "\n run from Batch_Importer =======================\n"
         record_ids = self.backend_adapter.search(filters)
         for record_id in record_ids:
             self._import_record(record_id)
 
     def _import_record(self, record_id):
-        print "\n Import_record from Batch_Importer ==============\n"
         """ Import a record directly or delay the import of the record.
 
         Method to implement in sub-classes.
@@ -368,7 +366,6 @@ class AddCheckpoint(ConnectorUnit):
                    ]
 
     def run(self, openerp_binding_id):
-        print "\n run from add_checkpoint =================\n"
         binding = self.model.browse(openerp_binding_id)
         record = binding.openerp_id
         add_checkpoint(self.session,
@@ -379,7 +376,6 @@ class AddCheckpoint(ConnectorUnit):
 
 @job(default_channel='root.shopware')
 def import_batch(session, model_name, backend_id, filters=None):
-    print "\n import_batch ==============\n"
     """ Prepare a batch import of records from Shopware """
     env = get_environment(session, model_name, backend_id)
     importer = env.get_connector_unit(BatchImporter)

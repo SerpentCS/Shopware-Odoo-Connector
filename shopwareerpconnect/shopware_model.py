@@ -181,7 +181,6 @@ class ShopwareBackend(models.Model):
     @api.multi
     def synchronize_metadata(self):
         try:
-            print "\n synchronize_metadata ===============\n"
             session = ConnectorSession.from_env(self.env)
             for backend in self:
                 for model in ('shopware.shop',
