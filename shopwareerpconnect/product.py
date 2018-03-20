@@ -27,17 +27,17 @@ import xmlrpclib
 import sys
 import pytz
 from collections import defaultdict
-from openerp import models, fields, api, _
-from openerp.addons.connector.queue.job import job, related_action
-from openerp.addons.connector.event import on_record_write
-from openerp.addons.connector.unit.synchronizer import (Importer,
+from odoo import models, fields, api, _
+from odoo.addons.queue_job.job import job, related_action
+from odoo.addons.connector.event import on_record_write
+from odoo.addons.connector.unit.synchronizer import (Importer,
                                                         Exporter,
                                                         )
-from openerp.addons.connector.exception import (MappingError,
+from odoo.addons.connector.exception import (MappingError,
                                                 InvalidDataError,
                                                 IDMissingInBackend
                                                 )
-from openerp.addons.connector.unit.mapper import (mapping,
+from odoo.addons.connector.unit.mapper import (mapping,
                                                   ImportMapper,
                                                   )
 from .unit.backend_adapter import (GenericAdapter,

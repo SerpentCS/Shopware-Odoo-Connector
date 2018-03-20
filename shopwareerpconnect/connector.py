@@ -19,9 +19,9 @@
 #
 ##############################################################################
 
-from openerp import models, fields
-from openerp.addons.connector.connector import ConnectorEnvironment
-from openerp.addons.connector.checkpoint import checkpoint
+from odoo import models, fields
+from odoo.addons.connector.connector import ConnectorEnvironment
+from odoo.addons.connector.checkpoint import checkpoint
 
 
 def get_environment(session, model_name, backend_id):

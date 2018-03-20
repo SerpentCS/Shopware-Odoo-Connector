@@ -19,7 +19,7 @@
 #
 ##############################################################################
 
-import openerp.addons.connector.backend as backend
+import odoo.addons.connector.backend as backend
 
 
 shopware = backend.Backend('shopware')

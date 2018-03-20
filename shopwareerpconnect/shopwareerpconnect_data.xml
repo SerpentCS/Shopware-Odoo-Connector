@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<openerp>
+<odoo>
     <data noupdate="1">
         <record id="product.decimal_discount" model="decimal.precision">
             <field name="digits">3</field>
@@ -85,10 +85,10 @@
 
         <record id="excep_wrong_total_amount" model="sale.exception">
             <field name="name">Total Amount differs from Shopware</field>
-            <field name="description">The amount computed in OpenERP doesn't match with the amount in Shopware.
+            <field name="description">The amount computed in odoo doesn't match with the amount in Shopware.
 
 Cause:
-The taxes are probably different between OpenERP and Shopware. A fiscal position could have changed the final price.
+The taxes are probably different between odoo and Shopware. A fiscal position could have changed the final price.
 
 Resolution:
 Check your taxes and fiscal positions configuration and correct them if necessary.</field>
@@ -101,10 +101,10 @@ Check your taxes and fiscal positions configuration and correct them if necessar
 
         <record id="excep_wrong_total_amount_tax" model="sale.exception">
             <field name="name">Total Tax Amount differs from Shopware</field>
-            <field name="description">The tax amount computed in OpenERP doesn't match with the tax amount in Shopware.
+            <field name="description">The tax amount computed in odoo doesn't match with the tax amount in Shopware.
 
 Cause:
-The taxes are probably different between OpenERP and Shopware. A fiscal position could have changed the final price.
+The taxes are probably different between odoo and Shopware. A fiscal position could have changed the final price.
 
 Resolution:
 Check your taxes and fiscal positions configuration and correct them if necessary.</field>
@@ -117,4 +117,4 @@ if order.shopware_bind_ids and abs(order.amount_tax - order.shopware_bind_ids[0]
         </record>
 
     </data>
-</openerp>
+</odoo>

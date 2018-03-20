@@ -20,11 +20,11 @@
 ##############################################################################
 
 import logging
-from openerp import _
-from openerp.addons.connector.queue.job import job, related_action
-from openerp.addons.connector.exception import FailedJobError
-from openerp.addons.connector.unit.synchronizer import Exporter
-from openerp.addons.connector_ecommerce.event import on_tracking_number_added
+from odoo import _
+from odoo.addons.queue_job.job import job, related_action
+from odoo.addons.queue_job.exception import FailedJobError
+from odoo.addons.connector.unit.synchronizer import Exporter
+from odoo.addons.connector_ecommerce.models.event import on_tracking_number_added
 from .connector import get_environment
 from .backend import shopware
 from .related_action import unwrap_binding

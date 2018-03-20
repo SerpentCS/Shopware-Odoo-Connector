@@ -32,11 +32,11 @@ are already bound, to update the last sync date.
 """
 
 import logging
-from openerp import fields, _
-from openerp.addons.connector.queue.job import job, related_action
-from openerp.addons.connector.connector import ConnectorUnit
-from openerp.addons.connector.unit.synchronizer import Importer
-from openerp.addons.connector.exception import IDMissingInBackend
+from odoo import fields, _
+from odoo.addons.queue_job.job import job, related_action
+from odoo.addons.connector.connector import ConnectorUnit
+from odoo.addons.connector.unit.synchronizer import Importer
+from odoo.addons.connector.exception import IDMissingInBackend
 from ..backend import shopware
 from ..connector import get_environment, add_checkpoint
 from ..related_action import link

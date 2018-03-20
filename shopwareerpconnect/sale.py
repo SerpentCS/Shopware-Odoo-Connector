@@ -22,21 +22,20 @@
 import logging
 import xmlrpclib
 from datetime import datetime, timedelta
-import openerp.addons.decimal_precision as dp
-from openerp import models, fields, api, _
-from openerp.addons.connector.connector import ConnectorUnit
-from openerp.addons.connector.session import ConnectorSession
-from openerp.addons.connector.exception import (NothingToDoJob,
-                                                FailedJobError,
-                                                IDMissingInBackend)
-from openerp.addons.connector.queue.job import job
-from openerp.addons.connector.unit.synchronizer import Exporter
-from openerp.addons.connector.unit.mapper import (mapping,
+import odoo.addons.decimal_precision as dp
+from odoo import models, fields, api, _
+from odoo.addons.connector.connector import ConnectorUnit
+from odoo.addons.queue_job.exception import (NothingToDoJob,
+                                                FailedJobError,)
+from odoo.addons.connector.exception import IDMissingInBackend
+from odoo.addons.queue_job.job import job
+from odoo.addons.connector.unit.synchronizer import Exporter
+from odoo.addons.connector.unit.mapper import (mapping,
                                                   ImportMapper
                                                   )
-from openerp.addons.connector_ecommerce.unit.sale_order_onchange import (
+from odoo.addons.connector_ecommerce.unit.sale_order_onchange import (
     SaleOrderOnChange)
-from openerp.addons.connector_ecommerce.sale import (ShippingLineBuilder,
+from odoo.addons.connector_ecommerce.unit.line_builder import (ShippingLineBuilder,
                                                      CashOnDeliveryLineBuilder,
                                                      GiftOrderLineBuilder)
 from .unit.backend_adapter import (GenericAdapter,

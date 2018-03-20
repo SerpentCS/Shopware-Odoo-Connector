@@ -21,14 +21,14 @@
 
 import logging
 import xmlrpclib
-from openerp import models, fields
-from openerp.tools.translate import _
-from openerp.addons.connector.queue.job import job, related_action
-from openerp.addons.connector.event import on_record_create
-from openerp.addons.connector.exception import NothingToDoJob
-from openerp.addons.connector.unit.synchronizer import Exporter
-from openerp.addons.connector.exception import IDMissingInBackend
-from openerp.addons.connector_ecommerce.event import on_picking_out_done
+from odoo import models, fields
+from odoo.tools.translate import _
+from odoo.addons.queue_job.job import job, related_action
+from odoo.addons.connector.event import on_record_create
+from odoo.addons.queue_job.exception import NothingToDoJob
+from odoo.addons.connector.unit.synchronizer import Exporter
+from odoo.addons.connector.exception import IDMissingInBackend
+from odoo.addons.connector_ecommerce.models.event import on_picking_out_done
 from .unit.backend_adapter import GenericAdapter
 from .connector import get_environment
 from .backend import shopware

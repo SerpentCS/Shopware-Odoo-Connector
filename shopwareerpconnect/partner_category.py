@@ -19,8 +19,8 @@
 #
 ##############################################################################
 
-from openerp import models, fields
-from openerp.addons.connector.unit.mapper import (mapping,
+from odoo import models, fields
+from odoo.addons.connector.unit.mapper import (mapping,
                                                   only_create,
                                                   ImportMapper
                                                   )

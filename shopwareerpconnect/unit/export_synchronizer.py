@@ -26,11 +26,11 @@ from datetime import datetime
 
 import psycopg2
 
-import openerp
-from openerp.tools.translate import _
-from openerp.addons.connector.queue.job import job, related_action
-from openerp.addons.connector.unit.synchronizer import Exporter
-from openerp.addons.connector.exception import (IDMissingInBackend,
+import odoo
+from odoo.tools.translate import _
+from odoo.addons.queue_job.job import job, related_action
+from odoo.addons.connector.unit.synchronizer import Exporter
+from odoo.addons.connector.exception import (IDMissingInBackend,
                                                 RetryableJobError)
 from .import_synchronizer import import_record
 from .backend_adapter import MAGENTO_DATETIME_FORMAT

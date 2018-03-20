@@ -19,8 +19,8 @@
 #
 ##############################################################################
 
-import openerp
-from openerp.addons.connector.connector import Binder
+import odoo
+from odoo.addons.connector.connector import Binder
 from ..backend import shopware
 
 

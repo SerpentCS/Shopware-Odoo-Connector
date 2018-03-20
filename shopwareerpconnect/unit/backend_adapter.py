@@ -24,8 +24,8 @@ import logging
 import xmlrpclib
 from shopware_rest import rest as shopwarelib
 
-from openerp.addons.connector.unit.backend_adapter import CRUDAdapter
-from openerp.addons.connector.exception import (NetworkRetryableError,
+from odoo.addons.connector.unit.backend_adapter import CRUDAdapter
+from odoo.addons.connector.exception import (NetworkRetryableError,
                                                 RetryableJobError)
 from datetime import datetime
 _logger = logging.getLogger(__name__)

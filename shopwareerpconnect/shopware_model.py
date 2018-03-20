@@ -22,11 +22,11 @@
 
 import logging
 from datetime import datetime, timedelta
-from openerp import models, fields, api, _
-from openerp.exceptions import Warning as UserError
-from openerp.addons.connector.session import ConnectorSession
-from openerp.addons.connector.connector import ConnectorUnit
-from openerp.addons.connector.unit.mapper import mapping, ImportMapper
+from odoo import models, fields, api, _
+from odoo.exceptions import Warning as UserError
+# from openerp.addons.connector.session import ConnectorSession
+from odoo.addons.connector.connector import ConnectorUnit
+from odoo.addons.connector.unit.mapper import mapping, ImportMapper
 from .unit.backend_adapter import GenericAdapter
 from .unit.import_synchronizer import (import_batch,
                                        DirectBatchImporter,
