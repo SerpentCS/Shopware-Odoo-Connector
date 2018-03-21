@@ -3,7 +3,7 @@ from odoo import models, fields
 
 
 class PaymentMethod(models.Model):
-    _inherit = "payment.method"
+    _inherit = "account.payment.mode" #payment.method
 
     create_invoice_on = fields.Selection(
         selection=[('open', 'Validate'),

@@ -83,7 +83,7 @@
             <field eval="'()'" name="args"/>
         </record>
 
-        <record id="excep_wrong_total_amount" model="sale.exception">
+        <!-- <record id="excep_wrong_total_amount" model="sale.exception.confirm">
             <field name="name">Total Amount differs from Shopware</field>
             <field name="description">The amount computed in odoo doesn't match with the amount in Shopware.
 
@@ -97,9 +97,9 @@ Check your taxes and fiscal positions configuration and correct them if necessar
             <field name="code">if order.shopware_bind_ids and abs(order.amount_total - order.shopware_bind_ids[0].total_amount) >= 0.01:
     failed = True</field>
             <field name="active" eval="True"/>
-        </record>
+        </record> -->
 
-        <record id="excep_wrong_total_amount_tax" model="sale.exception">
+        <!-- <record id="excep_wrong_total_amount_tax" model="sale.exception.confirm">
             <field name="name">Total Tax Amount differs from Shopware</field>
             <field name="description">The tax amount computed in odoo doesn't match with the tax amount in Shopware.
 
@@ -114,7 +114,7 @@ Check your taxes and fiscal positions configuration and correct them if necessar
 if order.shopware_bind_ids and abs(order.amount_tax - order.shopware_bind_ids[0].total_amount_tax) > 0.01:
     failed = True</field>
             <field name="active" eval="True"/>
-        </record>
+        </record> -->
 
     </data>
 </odoo>
