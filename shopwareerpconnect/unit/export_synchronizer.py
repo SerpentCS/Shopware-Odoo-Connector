@@ -95,7 +95,7 @@ class ShopwareBaseExporter(Exporter):
         if not record['updated_at']:
             # in rare case it can be empty, in doubt, import it
             return False
-        sync_date = openerp.fields.Datetime.from_string(sync)
+        sync_date = odoo.fields.Datetime.from_string(sync)
         shopware_date = datetime.strptime(record['updated_at'],
                                          MAGENTO_DATETIME_FORMAT)
         return sync_date < shopware_date

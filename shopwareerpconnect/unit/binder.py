@@ -123,8 +123,8 @@ class ShopwareModelBinder(ShopwareBinder):
             "got: %s, %s" % (external_id, binding_id)
         )
         # avoid to trigger the export when we modify the `shopware_id`
-        now_fmt = openerp.fields.Datetime.now()
-        if not isinstance(binding_id, openerp.models.BaseModel):
+        now_fmt = odoo.fields.Datetime.now()
+        if not isinstance(binding_id, odoo.models.BaseModel):
             binding_id = self.model.browse(binding_id)
         binding_id.with_context(connector_no_export=True).write(
             {'shopware_id': str(external_id),
@@ -140,7 +140,7 @@ class ShopwareModelBinder(ShopwareBinder):
         :param browse: when True, returns a browse_record instance
                        rather than an ID
         """
-        if isinstance(binding_id, openerp.models.BaseModel):
+        if isinstance(binding_id, odoo.models.BaseModel):
             binding = binding_id
         else:
             binding = self.model.browse(binding_id)

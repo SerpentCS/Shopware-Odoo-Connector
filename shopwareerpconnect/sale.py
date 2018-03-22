@@ -81,11 +81,11 @@ class ShopwareSaleOrder(models.Model):
     )
     total_amount = fields.Float(
         string='Total amount',
-        digits_compute=dp.get_precision('Account')
+        digits=dp.get_precision('Account')
     )
     total_amount_tax = fields.Float(
         string='Total amount w. tax',
-        digits_compute=dp.get_precision('Account')
+        digits=dp.get_precision('Account')
     )
     shopware_order_id = fields.Integer(string='Shopware Order ID',
                                       help="'order_id' field in Shopware")
@@ -179,7 +179,7 @@ class ShopwareSaleOrderLine(models.Model):
                                        string='Shopware Sale Order',
                                        required=True,
                                        ondelete='cascade',
-                                       select=True)
+                                       index=True)
     openerp_id = fields.Many2one(comodel_name='sale.order.line',
                                  string='Sale Order Line',
                                  required=True,
@@ -193,7 +193,7 @@ class ShopwareSaleOrderLine(models.Model):
         required=False,
     )
     tax_rate = fields.Float(string='Tax Rate',
-                            digits_compute=dp.get_precision('Account'))
+                            digits=dp.get_precision('Account'))
     notes = fields.Char()
 
     @api.model
@@ -243,14 +243,13 @@ class SaleOrderLine(models.Model):
 
     # XXX we can't use the new API on copy_data or we get an error:
     # 'setdefault' not supported on frozendict
-    def copy_data(self, cr, uid, id, default=None, context=None):
-        if context is None:
-            context = {}
+    # Removed extra parameters.
+    def copy_data(self,default=None):
+        if self._context is None:
+            self._context = {}
 
-        data = super(SaleOrderLine, self).copy_data(cr, uid, id,
-                                                    default=default,
-                                                    context=context)
-        if context.get('__copy_from_quotation'):
+        data = super(SaleOrderLine, self).copy_data(default=default)
+        if self._context.get('__copy_from_quotation'):
             # copy_data is called by `copy` of the sale.order which
             # builds a dict for the full new sale order, so we lose the
             # association between the old and the new line.

@@ -8,7 +8,7 @@
             <field name="inherit_id" ref="delivery.view_delivery_carrier_form" />
             <field name="arch" type="xml">
                  <data>
-                    <field name="price_rule_ids" position="after">
+                    <field name="delivery_type" position="after">
                         <field name="shopware_code"/>
                         <field name="shopware_tracking_title"/>
                         <field name="shopware_export_tracking"/>
