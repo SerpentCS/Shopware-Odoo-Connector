@@ -1,13 +1,8 @@
-List of OCA project dependencies for shopwareerpconnect
-========================================================
+OCA Dependencies
+=====================
 
-1)	account_payment_mode
-2)	account_payment_partner
-3)	account_payment_sale
-4)	connector
-5)	connector_base_product
-6)	connector_ecommerce
-7)	product_multi_category
-8)	sale_automatic_workflow
-9)	sale_automatic_workflow_payment_mode
-10)	sale_exception
+1)	connector
+2)	connector-ecommerce
+3)	product-attribute
+4)	sale-workflow
+5)	bank-payment
