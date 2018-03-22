@@ -3,6 +3,9 @@ from openerp import models, fields
 
 
 class PaymentMethod(models.Model):
+    """This corresponds to the object payment.mode of v8 with some
+    important changes. It also replaces the object payment.method
+    of the module sale_payment_method of OCA/sale-workflow"""
     _inherit = "account.payment.mode"
 
     create_invoice_on = fields.Selection(
