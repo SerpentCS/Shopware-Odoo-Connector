@@ -1,0 +1,10 @@
+OCA Dependencies
+=====================
+
+1)	connector
+2)	connector-ecommerce
+3)	product-attribute
+4)	sale-workflow
+5)	bank-payment
+6)	queue
+7)	server-tools
