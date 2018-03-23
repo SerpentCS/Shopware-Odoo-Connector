@@ -22,3 +22,4 @@ access_stock_picking_out_user,shopware_stock.picking user,model_shopware_stock_p
 access_stock_picking_out_manager,shopware_stock.picking manager,model_shopware_stock_picking,stock.group_stock_manager,1,1,1,1
 access_shopware_sale_order_stock_user,shopware_sale_order warehouse user,model_shopware_sale_order,stock.group_stock_user,1,1,0,0
 access_shopware_sale_order_line_stock_user,shopware_sale_order_line warehouse user,model_shopware_sale_order_line,stock.group_stock_user,1,1,0,0
+access_shopware_article,access_shopware_article,model_shopware_article,,1,0,0,0

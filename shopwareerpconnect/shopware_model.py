@@ -24,7 +24,7 @@ import logging
 from datetime import datetime, timedelta
 from odoo import models, fields, api, _
 from odoo.exceptions import Warning as UserError
-# from openerp.addons.connector.session import ConnectorSession
+# from odoo.addons.connector.session import ConnectorSession
 from odoo.addons.connector.connector import ConnectorUnit
 from odoo.addons.connector.unit.mapper import mapping, ImportMapper
 from .unit.backend_adapter import GenericAdapter
@@ -373,7 +373,7 @@ class ShopwareShop(models.Model):
              "payment method is not giving an option for this by "
              "itself. (See Payment Methods)",
     )
-    section_id = fields.Many2one(comodel_name='crm.case.section',
+    section_id = fields.Many2one(comodel_name='crm.team',       # In odoo version 8 its comodel_name was 'crm.case.section'
                                  string='Sales Team')
     import_orders_from_date = fields.Datetime(
         string='Import sale orders from date',
