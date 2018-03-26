@@ -1,8 +1,5 @@
-OCA Dependencies
-=====================
-
-1)	connector
-2)	connector-ecommerce
-3)	product-attribute
-4)	sale-workflow
-5)	bank-payment
+connector
+connector-ecommerce
+product-attribute
+sale-workflow
+bank-payment
