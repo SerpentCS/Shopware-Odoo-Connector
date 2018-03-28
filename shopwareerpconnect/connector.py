@@ -24,13 +24,13 @@ from odoo.addons.connector.connector import ConnectorEnvironment
 from odoo.addons.connector.checkpoint import checkpoint
 
 
-def get_environment(session, model_name, backend_id):
+def get_environment(self, model_name, backend_id):
     """ Create an environment to work with.  """
-    backend_record = session.env['shopware.backend'].browse(backend_id)
-    env = ConnectorEnvironment(backend_record, session, model_name)
+    backend_record = self.env['shopware.backend'].browse(backend_id)
+    env = ConnectorEnvironment(backend_record, model_name)
     lang = backend_record.default_lang_id
     lang_code = lang.code if lang else 'en_US'
-    if lang_code == session.context.get('lang'):
+    if lang_code == self._context.get('lang'):
         return env
     else:
         with env.session.change_context(lang=lang_code):

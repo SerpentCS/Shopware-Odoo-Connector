@@ -189,7 +189,7 @@ class ShopwareBackend(models.Model):
                     # import directly, do not delay because this
                     # is a fast operation, a direct return is fine
                     # and it is simpler to import them sequentially
-                    import_batch(model, backend.id)
+                    import_batch(self, model, backend.id)
             return True
         except Exception as e:
             _logger.error(e.message, exc_info=True)
@@ -237,7 +237,7 @@ class ShopwareBackend(models.Model):
                 from_date = fields.Datetime.from_string(from_date)
             else:
                 from_date = None
-            import_batch.delay(model,
+            import_batch.delay(self, model,
                                backend.id,
                                filters={'from_date': from_date,
                                         'to_date': import_start_time})
@@ -308,7 +308,8 @@ class ShopwareBackend(models.Model):
 
     @api.model
     def _scheduler_import_product_product(self, domain=None):
-        self._shopware_backend('import_product_product', domain=domain)
+        self._shopware_backend('import_articles', domain=domain)
+        # "import_articles" is name of above method to call from scheduler
 
     @api.model
     def _scheduler_update_product_stock_qty(self, domain=None):

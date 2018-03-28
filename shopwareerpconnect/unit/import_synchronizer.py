@@ -375,9 +375,9 @@ class AddCheckpoint(ConnectorUnit):
 
 
 @job(default_channel='root.shopware')
-def import_batch(session, model_name, backend_id, filters=None):
+def import_batch(self, model_name, backend_id, filters=None):
     """ Prepare a batch import of records from Shopware """
-    env = get_environment(session, model_name, backend_id)
+    env = get_environment(self, model_name, backend_id)
     importer = env.get_connector_unit(BatchImporter)
     importer.run(filters=filters)
 
