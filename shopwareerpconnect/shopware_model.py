@@ -22,11 +22,11 @@
 
 import logging
 from datetime import datetime, timedelta
-from openerp import models, fields, api, _
-from openerp.exceptions import Warning as UserError
-from openerp.addons.connector.session import ConnectorSession
-from openerp.addons.connector.connector import ConnectorUnit
-from openerp.addons.connector.unit.mapper import mapping, ImportMapper
+from odoo import models, fields, api, _
+from odoo.exceptions import Warning as UserError
+# from odoo.addons.connector.session import ConnectorSession
+from odoo.addons.connector.connector import ConnectorUnit
+from odoo.addons.connector.unit.mapper import mapping, ImportMapper
 from .unit.backend_adapter import GenericAdapter
 from .unit.import_synchronizer import (import_batch,
                                        DirectBatchImporter,
@@ -181,7 +181,7 @@ class ShopwareBackend(models.Model):
     @api.multi
     def synchronize_metadata(self):
         try:
-            session = ConnectorSession.from_env(self.env)
+            # session = ConnectorSession.from_env(self.env)
             for backend in self:
                 for model in ('shopware.shop',
                               'shopware.shop',
@@ -189,7 +189,7 @@ class ShopwareBackend(models.Model):
                     # import directly, do not delay because this
                     # is a fast operation, a direct return is fine
                     # and it is simpler to import them sequentially
-                    import_batch(session, model, backend.id)
+                    import_batch(self, model, backend.id)
             return True
         except Exception as e:
             _logger.error(e.message, exc_info=True)
@@ -216,19 +216,19 @@ class ShopwareBackend(models.Model):
 
     @api.multi
     def import_customer_groups(self):
-        session = ConnectorSession(self.env.cr, self.env.uid,
-                                   context=self.env.context)
+        # session = ConnectorSession(self.env.cr, self.env.uid,
+                                   # context=self.env.context)
         for backend in self:
             backend.check_shopware_structure()
-            import_batch.delay(session, 'shopware.res.partner.category',
+            import_batch.delay('shopware.res.partner.category',
                                backend.id)
 
         return True
 
     @api.multi
     def _import_from_date(self, model, from_date_field):
-        session = ConnectorSession(self.env.cr, self.env.uid,
-                                   context=self.env.context)
+        # session = ConnectorSession(self.env.cr, self.env.uid,
+                                   # context=self.env.context)
         import_start_time = datetime.now()
         for backend in self:
             backend.check_shopware_structure()
@@ -237,7 +237,7 @@ class ShopwareBackend(models.Model):
                 from_date = fields.Datetime.from_string(from_date)
             else:
                 from_date = None
-            import_batch.delay(session, model,
+            import_batch.delay(self, model,
                                backend.id,
                                filters={'from_date': from_date,
                                         'to_date': import_start_time})
@@ -308,7 +308,8 @@ class ShopwareBackend(models.Model):
 
     @api.model
     def _scheduler_import_product_product(self, domain=None):
-        self._shopware_backend('import_product_product', domain=domain)
+        self._shopware_backend('import_articles', domain=domain)
+        # "import_articles" is name of above method to call from scheduler
 
     @api.model
     def _scheduler_update_product_stock_qty(self, domain=None):
@@ -373,7 +374,7 @@ class ShopwareShop(models.Model):
              "payment method is not giving an option for this by "
              "itself. (See Payment Methods)",
     )
-    section_id = fields.Many2one(comodel_name='crm.case.section',
+    section_id = fields.Many2one(comodel_name='crm.team',       # In odoo version 8 its comodel_name was 'crm.case.section'
                                  string='Sales Team')
     import_orders_from_date = fields.Datetime(
         string='Import sale orders from date',
@@ -432,8 +433,8 @@ class ShopwareShop(models.Model):
 
     @api.multi
     def import_partners(self):
-        session = ConnectorSession(self.env.cr, self.env.uid,
-                                   context=self.env.context)
+        # session = ConnectorSession(self.env.cr, self.env.uid,
+                                   # context=self.env.context)
         import_start_time = datetime.now()
         for shop in self:
             backend_id = shop.backend_id.id
@@ -443,7 +444,7 @@ class ShopwareShop(models.Model):
             else:
                 from_date = None
             partner_import_batch.delay(
-                session, 'shopware.res.partner', backend_id,
+                'shopware.res.partner', backend_id,
                 {'shopware_shop_id': shop.shopware_id,
                  'from_date': from_date,
                  'to_date': import_start_time})
@@ -463,8 +464,8 @@ class ShopwareShop(models.Model):
 
     @api.multi
     def import_sale_orders(self):
-        session = ConnectorSession(self.env.cr, self.env.uid,
-                                   context=self.env.context)
+        # session = ConnectorSession(self.env.cr, self.env.uid,
+                                   # context=self.env.context)
         import_start_time = datetime.now()
         for shop in self:
             if shop.no_sales_order_sync:
@@ -479,7 +480,7 @@ class ShopwareShop(models.Model):
             else:
                 from_date = None
             sale_order_import_batch.delay(
-                session,
+                
                 'shopware.sale.order',
                 backend_id,
                 {'shopware_shop_id': shop.shopware_id,

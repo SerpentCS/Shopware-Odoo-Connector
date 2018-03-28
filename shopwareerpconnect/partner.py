@@ -22,16 +22,16 @@
 import logging
 import xmlrpclib
 from collections import namedtuple
-from openerp import models, fields, api
-from openerp.addons.connector.queue.job import job
-from openerp.addons.connector.connector import ConnectorUnit
-from openerp.addons.connector.exception import MappingError
-from openerp.addons.connector.unit.backend_adapter import BackendAdapter
-from openerp.addons.connector.unit.mapper import (mapping,
+from odoo import models, fields, api
+from odoo.addons.queue_job.job import job
+from odoo.addons.connector.connector import ConnectorUnit
+from odoo.addons.connector.exception import MappingError
+from odoo.addons.connector.unit.backend_adapter import BackendAdapter
+from odoo.addons.connector.unit.mapper import (mapping,
                                                   only_create,
                                                   ImportMapper
                                                   )
-from openerp.addons.connector.exception import IDMissingInBackend
+from odoo.addons.connector.exception import IDMissingInBackend
 from .unit.backend_adapter import (GenericAdapter,
                                    MAGENTO_DATETIME_FORMAT,
                                    )

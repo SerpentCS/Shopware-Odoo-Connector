@@ -22,11 +22,11 @@
 import logging
 import xmlrpclib
 import pytz
-from openerp import models, fields
-from openerp.addons.connector.unit.mapper import (mapping,
+from odoo import models, fields
+from odoo.addons.connector.unit.mapper import (mapping,
                                                   ImportMapper
                                                   )
-from openerp.addons.connector.exception import (IDMissingInBackend,
+from odoo.addons.connector.exception import (IDMissingInBackend,
                                                 MappingError,
                                                 )
 from .unit.backend_adapter import GenericAdapter

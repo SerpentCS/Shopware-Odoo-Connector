@@ -19,7 +19,7 @@
 #
 ##############################################################################
 
-from openerp.addons.connector.exception import RetryableJobError
+from odoo.addons.connector.exception import RetryableJobError
 
 
 class OrderImportRuleRetry(RetryableJobError):

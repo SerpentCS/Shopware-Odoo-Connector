@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<openerp>
+<odoo>
   <data>
 
     <menuitem id="menu_shopware_root"
@@ -20,4 +20,4 @@
         action="action_shopware_shop"/>
 
   </data>
-</openerp>
+</odoo>

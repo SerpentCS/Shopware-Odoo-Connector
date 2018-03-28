@@ -28,13 +28,13 @@ When called on a job, they will return an action to the client.
 """
 
 import functools
-from openerp import exceptions, _
-from openerp.addons.connector import related_action
+from odoo import exceptions, _
+from odoo.addons.connector.models import queue_job
 from .connector import get_environment
 from .unit.backend_adapter import GenericAdapter
 from .unit.binder import ShopwareBinder
 
-unwrap_binding = functools.partial(related_action.unwrap_binding,
+unwrap_binding = functools.partial(queue_job.QueueJob.related_action_unwrap_binding,
                                    binder_class=ShopwareBinder)
 
 

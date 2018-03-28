@@ -22,21 +22,20 @@
 import logging
 import xmlrpclib
 from datetime import datetime, timedelta
-import openerp.addons.decimal_precision as dp
-from openerp import models, fields, api, _
-from openerp.addons.connector.connector import ConnectorUnit
-from openerp.addons.connector.session import ConnectorSession
-from openerp.addons.connector.exception import (NothingToDoJob,
-                                                FailedJobError,
-                                                IDMissingInBackend)
-from openerp.addons.connector.queue.job import job
-from openerp.addons.connector.unit.synchronizer import Exporter
-from openerp.addons.connector.unit.mapper import (mapping,
+import odoo.addons.decimal_precision as dp
+from odoo import models, fields, api, _
+from odoo.addons.connector.connector import ConnectorUnit
+from odoo.addons.queue_job.exception import (NothingToDoJob,
+                                                FailedJobError,)
+from odoo.addons.connector.exception import IDMissingInBackend
+from odoo.addons.queue_job.job import job
+from odoo.addons.connector.unit.synchronizer import Exporter
+from odoo.addons.connector.unit.mapper import (mapping,
                                                   ImportMapper
                                                   )
-from openerp.addons.connector_ecommerce.unit.sale_order_onchange import (
+from odoo.addons.connector_ecommerce.unit.sale_order_onchange import (
     SaleOrderOnChange)
-from openerp.addons.connector_ecommerce.sale import (ShippingLineBuilder,
+from odoo.addons.connector_ecommerce.unit.line_builder import (ShippingLineBuilder,
                                                      CashOnDeliveryLineBuilder,
                                                      GiftOrderLineBuilder)
 from .unit.backend_adapter import (GenericAdapter,
@@ -82,11 +81,11 @@ class ShopwareSaleOrder(models.Model):
     )
     total_amount = fields.Float(
         string='Total amount',
-        digits_compute=dp.get_precision('Account')
+        digits=dp.get_precision('Account')
     )
     total_amount_tax = fields.Float(
         string='Total amount w. tax',
-        digits_compute=dp.get_precision('Account')
+        digits=dp.get_precision('Account')
     )
     shopware_order_id = fields.Integer(string='Shopware Order ID',
                                       help="'order_id' field in Shopware")
@@ -180,7 +179,7 @@ class ShopwareSaleOrderLine(models.Model):
                                        string='Shopware Sale Order',
                                        required=True,
                                        ondelete='cascade',
-                                       select=True)
+                                       index=True)
     openerp_id = fields.Many2one(comodel_name='sale.order.line',
                                  string='Sale Order Line',
                                  required=True,
@@ -194,7 +193,7 @@ class ShopwareSaleOrderLine(models.Model):
         required=False,
     )
     tax_rate = fields.Float(string='Tax Rate',
-                            digits_compute=dp.get_precision('Account'))
+                            digits=dp.get_precision('Account'))
     notes = fields.Char()
 
     @api.model
@@ -244,14 +243,13 @@ class SaleOrderLine(models.Model):
 
     # XXX we can't use the new API on copy_data or we get an error:
     # 'setdefault' not supported on frozendict
-    def copy_data(self, cr, uid, id, default=None, context=None):
-        if context is None:
-            context = {}
+    # Removed extra parameters.
+    def copy_data(self,default=None):
+        if self._context is None:
+            self._context = {}
 
-        data = super(SaleOrderLine, self).copy_data(cr, uid, id,
-                                                    default=default,
-                                                    context=context)
-        if context.get('__copy_from_quotation'):
+        data = super(SaleOrderLine, self).copy_data(default=default)
+        if self._context.get('__copy_from_quotation'):
             # copy_data is called by `copy` of the sale.order which
             # builds a dict for the full new sale order, so we lose the
             # association between the old and the new line.
