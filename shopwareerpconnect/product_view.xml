@@ -7,7 +7,7 @@
             <field name="model">product.category</field>
             <field name="inherit_id" ref="product.product_category_form_view"/>
             <field name="arch" type="xml">
-                <xpath expr="//sheet/group[1]" position="inside">
+                <xpath expr="//group[1]" position="inside">
                     <newline/>
                     <group name="shopware" string="Shopware Bindings">
                         <field name="shopware_bind_ids" nolabel="1">

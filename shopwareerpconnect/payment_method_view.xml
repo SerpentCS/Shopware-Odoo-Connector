@@ -4,8 +4,9 @@
   <data>
 
     <record id="payment_method_view_form" model="ir.ui.view">
-      <field name="model">payment.method</field>
-      <field name="inherit_id" ref="connector_ecommerce.payment_method_view_form"/>
+      <field name="model">account.payment.mode</field><!-- Replaced with payment.method -->
+      <field name="inherit_id" ref="connector_ecommerce.account_payment_mode_form_inherit"/>
+      <!-- Corrected parent view id connector_ecommerce.payment_method_view_form -->
       <field name="arch" type="xml">
 
         <group name="import_rule" position="after">

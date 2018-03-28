@@ -1,0 +1,5 @@
+connector
+connector-ecommerce
+product-attribute
+sale-workflow
+bank-payment

@@ -36,9 +36,9 @@ from openerp.addons.connector.unit.mapper import (mapping,
                                                   )
 from openerp.addons.connector_ecommerce.unit.sale_order_onchange import (
     SaleOrderOnChange)
-from openerp.addons.connector_ecommerce.sale import (ShippingLineBuilder,
-                                                     CashOnDeliveryLineBuilder,
-                                                     GiftOrderLineBuilder)
+from openerp.addons.connector_ecommerce.unit.line_builder import (ShippingLineBuilder,
+                                                                CashOnDeliveryLineBuilder,
+                                                                GiftOrderLineBuilder)
 from .unit.backend_adapter import (GenericAdapter,
                                    MAGENTO_DATETIME_FORMAT,
                                    )
