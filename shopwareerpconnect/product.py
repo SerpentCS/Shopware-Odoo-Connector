@@ -158,7 +158,6 @@ class ShopwareProductProduct(models.Model):
         backends = defaultdict(self.browse)
         for product in self:
             backends[product.backend_id] |= product
-
         for backend, products in backends.iteritems():
             self._recompute_shopware_qty_backend(backend, products)
         return True
