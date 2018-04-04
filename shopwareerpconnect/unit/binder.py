@@ -21,7 +21,7 @@
 
 import openerp
 from openerp.addons.connector.connector import Binder
-from ..backend import shopware
+from ..models.backend import shopware
 
 
 class ShopwareBinder(Binder):
