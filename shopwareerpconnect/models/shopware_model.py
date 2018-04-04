@@ -24,11 +24,10 @@ import logging
 from datetime import datetime, timedelta
 from odoo import models, fields, api, _
 from odoo.exceptions import Warning as UserError
-# from odoo.addons.connector.session import ConnectorSession
 from odoo.addons.connector.connector import ConnectorUnit
 from odoo.addons.connector.unit.mapper import mapping, ImportMapper
-from .unit.backend_adapter import GenericAdapter
-from .unit.import_synchronizer import (import_batch,
+from ..unit.backend_adapter import GenericAdapter
+from ..unit.import_synchronizer import (import_batch,
                                        DirectBatchImporter,
                                        ShopwareImporter,
                                        )

@@ -28,7 +28,7 @@ from odoo.addons.connector.event import on_record_create
 from odoo.addons.connector_ecommerce.models.event import (on_invoice_paid,
                                                       on_invoice_validated)
 from odoo.addons.connector.exception import IDMissingInBackend
-from .unit.backend_adapter import GenericAdapter
+from ..unit.backend_adapter import GenericAdapter
 from .connector import get_environment
 from .backend import shopware
 from .related_action import unwrap_binding

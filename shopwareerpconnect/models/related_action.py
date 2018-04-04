@@ -31,8 +31,8 @@ import functools
 from odoo import exceptions, _
 from odoo.addons.connector.models import queue_job
 from .connector import get_environment
-from .unit.backend_adapter import GenericAdapter
-from .unit.binder import ShopwareBinder
+from ..unit.backend_adapter import GenericAdapter
+from ..unit.binder import ShopwareBinder
 
 unwrap_binding = functools.partial(queue_job.QueueJob.related_action_unwrap_binding,
                                    binder_class=ShopwareBinder)

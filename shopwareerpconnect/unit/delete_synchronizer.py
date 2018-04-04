@@ -22,8 +22,8 @@
 from odoo.tools.translate import _
 from odoo.addons.queue_job.job import job, related_action
 from odoo.addons.connector.unit.synchronizer import Deleter
-from ..connector import get_environment
-from ..related_action import link
+from ..models.connector import get_environment
+from ..models.related_action import link
 
 
 class ShopwareDeleter(Deleter):

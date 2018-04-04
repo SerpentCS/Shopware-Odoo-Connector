@@ -40,11 +40,11 @@ from odoo.addons.connector.exception import (MappingError,
 from odoo.addons.connector.unit.mapper import (mapping,
                                                   ImportMapper,
                                                   )
-from .unit.backend_adapter import (GenericAdapter,
+from ..unit.backend_adapter import (GenericAdapter,
                                    MAGENTO_DATETIME_FORMAT,
                                    )
-from .unit.mapper import normalize_datetime
-from .unit.import_synchronizer import (DelayedBatchImporter,
+from ..unit.mapper import normalize_datetime
+from ..unit.import_synchronizer import (DelayedBatchImporter,
                                        ShopwareImporter,
                                        TranslationImporter,
                                        AddCheckpoint,

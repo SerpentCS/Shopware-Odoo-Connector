@@ -34,8 +34,8 @@ from odoo.addons.connector.exception import (IDMissingInBackend,
                                                 RetryableJobError)
 from .import_synchronizer import import_record
 from .backend_adapter import MAGENTO_DATETIME_FORMAT
-from ..connector import get_environment
-from ..related_action import unwrap_binding
+from ..models.connector import get_environment
+from ..models.related_action import unwrap_binding
 
 _logger = logging.getLogger(__name__)
 
