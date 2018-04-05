@@ -29,7 +29,7 @@ from odoo.addons.queue_job.exception import NothingToDoJob
 from odoo.addons.connector.unit.synchronizer import Exporter
 from odoo.addons.connector.exception import IDMissingInBackend
 from odoo.addons.connector_ecommerce.models.event import on_picking_out_done
-from .unit.backend_adapter import GenericAdapter
+from ..unit.backend_adapter import GenericAdapter
 from .connector import get_environment
 from .backend import shopware
 from .stock_tracking import export_tracking_number

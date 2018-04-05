@@ -37,9 +37,9 @@ from odoo.addons.queue_job.job import job, related_action
 from odoo.addons.connector.connector import ConnectorUnit
 from odoo.addons.connector.unit.synchronizer import Importer
 from odoo.addons.connector.exception import IDMissingInBackend
-from ..backend import shopware
-from ..connector import get_environment, add_checkpoint
-from ..related_action import link
+from ..models.backend import shopware
+from ..models.connector import get_environment, add_checkpoint
+from ..models.related_action import link
 
 _logger = logging.getLogger(__name__)
 
@@ -269,7 +269,7 @@ class DirectBatchImporter(BatchImporter):
 
     def _import_record(self, record_id):
         """ Import the record directly """
-        import_record(self.session,
+        import_record(self,
                       self.model._name,
                       self.backend_record.id,
                       record_id)

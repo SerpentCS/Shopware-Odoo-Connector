@@ -32,13 +32,13 @@ from odoo.addons.connector.unit.mapper import (mapping,
                                                   ImportMapper
                                                   )
 from odoo.addons.connector.exception import IDMissingInBackend
-from .unit.backend_adapter import (GenericAdapter,
+from ..unit.backend_adapter import (GenericAdapter,
                                    MAGENTO_DATETIME_FORMAT,
                                    )
-from .unit.import_synchronizer import (DelayedBatchImporter,
+from ..unit.import_synchronizer import (DelayedBatchImporter,
                                        ShopwareImporter,
                                        )
-from .unit.mapper import normalize_datetime
+from ..unit.mapper import normalize_datetime
 from .backend import shopware
 from .connector import get_environment
 
