@@ -236,7 +236,7 @@ class ShopwareBackend(models.Model):
                 from_date = fields.Datetime.from_string(from_date)
             else:
                 from_date = None
-            import_batch.delay(self, model,
+            self.env[model].with_delay().import_batch(self, model,
                                backend.id,
                                filters={'from_date': from_date,
                                         'to_date': import_start_time})

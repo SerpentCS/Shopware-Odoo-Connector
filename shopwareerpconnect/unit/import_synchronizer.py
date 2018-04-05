@@ -269,7 +269,7 @@ class DirectBatchImporter(BatchImporter):
 
     def _import_record(self, record_id):
         """ Import the record directly """
-        import_record(self.session,
+        import_record(self,
                       self.model._name,
                       self.backend_record.id,
                       record_id)
