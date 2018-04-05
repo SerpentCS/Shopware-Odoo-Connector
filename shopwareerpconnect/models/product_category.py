@@ -29,8 +29,8 @@ from openerp.addons.connector.unit.mapper import (mapping,
 from openerp.addons.connector.exception import (IDMissingInBackend,
                                                 MappingError,
                                                 )
-from .unit.backend_adapter import GenericAdapter
-from .unit.import_synchronizer import (DelayedBatchImporter,
+from ..unit.backend_adapter import GenericAdapter
+from ..unit.import_synchronizer import (DelayedBatchImporter,
                                        ShopwareImporter,
                                        TranslationImporter,
                                        AddCheckpoint,

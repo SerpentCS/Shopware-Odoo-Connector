@@ -40,11 +40,11 @@ from openerp.addons.connector.exception import (MappingError,
 from openerp.addons.connector.unit.mapper import (mapping,
                                                   ImportMapper,
                                                   )
-from .unit.backend_adapter import (GenericAdapter,
+from ..unit.backend_adapter import (GenericAdapter,
                                    MAGENTO_DATETIME_FORMAT,
                                    )
-from .unit.mapper import normalize_datetime
-from .unit.import_synchronizer import (DelayedBatchImporter,
+from ..unit.mapper import normalize_datetime
+from ..unit.import_synchronizer import (DelayedBatchImporter,
                                        ShopwareImporter,
                                        TranslationImporter,
                                        AddCheckpoint,
@@ -158,7 +158,6 @@ class ShopwareProductProduct(models.Model):
         backends = defaultdict(self.browse)
         for product in self:
             backends[product.backend_id] |= product
-
         for backend, products in backends.iteritems():
             self._recompute_shopware_qty_backend(backend, products)
         return True

@@ -27,8 +27,8 @@ from openerp.exceptions import Warning as UserError
 from openerp.addons.connector.session import ConnectorSession
 from openerp.addons.connector.connector import ConnectorUnit
 from openerp.addons.connector.unit.mapper import mapping, ImportMapper
-from .unit.backend_adapter import GenericAdapter
-from .unit.import_synchronizer import (import_batch,
+from ..unit.backend_adapter import GenericAdapter
+from ..unit.import_synchronizer import (import_batch,
                                        DirectBatchImporter,
                                        ShopwareImporter,
                                        )
@@ -287,8 +287,10 @@ class ShopwareBackend(models.Model):
         if domain is None:
             domain = []
         backends = self.search(domain)
-        if backends:
-            getattr(backends, callback)()
+        for backend in backends:
+            if backend:
+                value = getattr(backend, callback)
+                value()
 
     @api.model
     def _scheduler_import_sale_orders(self, domain=None):
@@ -308,7 +310,7 @@ class ShopwareBackend(models.Model):
 
     @api.model
     def _scheduler_import_product_product(self, domain=None):
-        self._shopware_backend('import_product_product', domain=domain)
+        self._shopware_backend('import_articles', domain=domain)
 
     @api.model
     def _scheduler_update_product_stock_qty(self, domain=None):

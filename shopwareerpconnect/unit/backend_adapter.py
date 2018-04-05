@@ -142,13 +142,12 @@ class ShopwareCRUDAdapter(CRUDAdapter):
             client.setCredentials(self.shopware.username,
                                   self.shopware.token,
                                   self.shopware.location)
-            result = client.call(resource, method, arguments, arguments)
+            result = client.call(resource, method, arguments)
 
             if type(result) is type(bool) and result is False:
                 raise NetworkRetryableError(
                     'Shopware API could not be reached.'
                 )
-
             return result
         except (socket.gaierror, socket.error, socket.timeout) as err:
             raise NetworkRetryableError(

@@ -20,8 +20,8 @@
 ##############################################################################
 
 from openerp.addons.connector.connector import Binder
-from .unit.export_synchronizer import export_record
-from .unit.delete_synchronizer import export_delete_record
+from ..unit.export_synchronizer import export_record
+from ..unit.delete_synchronizer import export_delete_record
 from .connector import get_environment
 
 

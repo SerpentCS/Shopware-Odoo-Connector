@@ -29,7 +29,7 @@ from openerp.addons.connector.exception import NothingToDoJob
 from openerp.addons.connector.unit.synchronizer import Exporter
 from openerp.addons.connector.exception import IDMissingInBackend
 from openerp.addons.connector_ecommerce.models.event import on_picking_out_done
-from .unit.backend_adapter import GenericAdapter
+from ..unit.backend_adapter import GenericAdapter
 from .connector import get_environment
 from .backend import shopware
 from .stock_tracking import export_tracking_number

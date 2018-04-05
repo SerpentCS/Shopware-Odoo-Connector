@@ -37,9 +37,9 @@ from openerp.addons.connector.queue.job import job, related_action
 from openerp.addons.connector.connector import ConnectorUnit
 from openerp.addons.connector.unit.synchronizer import Importer
 from openerp.addons.connector.exception import IDMissingInBackend
-from ..backend import shopware
-from ..connector import get_environment, add_checkpoint
-from ..related_action import link
+from ..models.backend import shopware
+from ..models.connector import get_environment, add_checkpoint
+from ..models.related_action import link
 
 _logger = logging.getLogger(__name__)
 

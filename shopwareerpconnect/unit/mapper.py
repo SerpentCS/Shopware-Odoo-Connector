@@ -25,7 +25,9 @@ def normalize_datetime(field):
     no real date is set to null for correct import to
     OpenERP"""
     def modifier(self, record, to_attr):
-        if record[field] == '0000-00-00 00:00:00':
-            return None
-        return record[field]
+        if record.get(field):
+            # if 'field' does exist in record then it will enter here
+            if record[field] == '0000-00-00 00:00:00':
+                return None
+            return record[field]
     return modifier

@@ -32,13 +32,13 @@ from openerp.addons.connector.unit.mapper import (mapping,
                                                   ImportMapper
                                                   )
 from openerp.addons.connector.exception import IDMissingInBackend
-from .unit.backend_adapter import (GenericAdapter,
+from ..unit.backend_adapter import (GenericAdapter,
                                    MAGENTO_DATETIME_FORMAT,
                                    )
-from .unit.import_synchronizer import (DelayedBatchImporter,
+from ..unit.import_synchronizer import (DelayedBatchImporter,
                                        ShopwareImporter,
                                        )
-from .unit.mapper import normalize_datetime
+from ..unit.mapper import normalize_datetime
 from .backend import shopware
 from .connector import get_environment
 
@@ -270,7 +270,7 @@ class PartnerImportMapper(ImportMapper):
     def names(self, record):
         # TODO create a glue module for base_surname
         parts = [part for part in (record['firstname'],
-                                   record['middlename'],
+                                   # record['middlename'],
                                    record['lastname']) if part]
         return {'name': ' '.join(parts)}
 
@@ -278,7 +278,7 @@ class PartnerImportMapper(ImportMapper):
     def customer_group_id(self, record):
         # import customer groups
         binder = self.binder_for(model='shopware.res.partner.category')
-        category_id = binder.to_openerp(record['group_id'], unwrap=True)
+        category_id = binder.to_openerp(record['shopId'], unwrap=True)
 
         if category_id is None:
             raise MappingError("The partner category with "
@@ -292,14 +292,14 @@ class PartnerImportMapper(ImportMapper):
     @mapping
     def shop_id(self, record):
         binder = self.binder_for(model='shopware.shop')
-        shop_id = binder.to_openerp(record['shop_id'])
+        shop_id = binder.to_openerp(record['shopId'])
         return {'shop_id': shop_id}
 
     @only_create
     @mapping
     def company_id(self, record):
         binder = self.binder_for(model='shopware.shop')
-        shop = binder.to_openerp(record['shop_id'], browse=True)
+        shop = binder.to_openerp(record['shopId'], browse=True)
         if shop:
             company = shop.backend_id.company_id
             if company:
@@ -309,7 +309,7 @@ class PartnerImportMapper(ImportMapper):
     @mapping
     def lang(self, record):
         binder = self.binder_for(model='shopware.shop')
-        shop = binder.to_openerp(record['shop_id'], browse=True)
+        shop = binder.to_openerp(record['shopId'], browse=True)
         if shop:
             if shop.lang_id:
                 return {'lang': shop.lang_id.code}
@@ -349,7 +349,7 @@ class PartnerImporter(ShopwareImporter):
     def _import_dependencies(self):
         """ Import the dependencies for the record"""
         record = self.shopware_record
-        self._import_dependency(record['group_id'],
+        self._import_dependency(record['shopId'],
                                 'shopware.res.partner.category')
 
     def _after_import(self, partner_binding):

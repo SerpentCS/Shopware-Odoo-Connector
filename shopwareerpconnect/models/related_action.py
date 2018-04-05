@@ -31,8 +31,8 @@ import functools
 from openerp import exceptions, _
 from openerp.addons.connector import related_action
 from .connector import get_environment
-from .unit.backend_adapter import GenericAdapter
-from .unit.binder import ShopwareBinder
+from ..unit.backend_adapter import GenericAdapter
+from ..unit.binder import ShopwareBinder
 
 unwrap_binding = functools.partial(related_action.unwrap_binding,
                                    binder_class=ShopwareBinder)

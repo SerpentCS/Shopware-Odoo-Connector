@@ -24,8 +24,8 @@ from openerp.addons.connector.unit.mapper import (mapping,
                                                   only_create,
                                                   ImportMapper
                                                   )
-from .unit.backend_adapter import GenericAdapter
-from .unit.import_synchronizer import DelayedBatchImporter
+from ..unit.backend_adapter import GenericAdapter
+from ..unit.import_synchronizer import DelayedBatchImporter
 from .backend import shopware
 
 
