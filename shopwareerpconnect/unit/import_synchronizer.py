@@ -230,7 +230,6 @@ class ShopwareImporter(Importer):
             self._update(binding, record)
         else:
             record = self._create_data(map_record)
-            record.update({'type':'contact'})
             binding = self._create(record)
 
         self.binder.bind(self.shopware_id, binding)
