@@ -38,6 +38,7 @@ class ResPartnerCategory(models.Model):
         string='Shopware Bindings',
         readonly=True,
     )
+    shopware_key = fields.Char("Shopware Key")
 
 
 class ShopwareResPartnerCategory(models.Model):
@@ -64,6 +65,15 @@ class PartnerCategoryBatchImporter(DelayedBatchImporter):
     """ Delay import of the records """
     _model_name = ['shopware.res.partner.category']
 
+    def run(self, filters=None):
+        """ Run the synchronization """
+        # Search for Shopware data.
+        result = self.backend_adapter.search(filters)
+        # Fetching Shopware ids from result.
+        result_ids = result.get('data') if 'data' in result else []
+        # Importing the shopware data.
+        for record_id in result_ids:
+            self._import_record(record_id, priority=10)
 
 PartnerCategoryBatchImport = PartnerCategoryBatchImporter  # deprecated
 
@@ -73,10 +83,15 @@ class PartnerCategoryImportMapper(ImportMapper):
     _model_name = 'shopware.res.partner.category'
 
     direct = [
-        ('key', 'name'),
+        ('name', 'name'),
         #TODO: find a similar field in Shopware
         # ('tax_class_id', 'tax_class_id'),
     ]
+
+    @mapping
+    def shopware_key(self, record):
+        # Mapping the key value of Shopware
+        return {'shopware_key': record['key']}
 
     @mapping
     def shopware_id(self, record):
@@ -91,7 +106,7 @@ class PartnerCategoryImportMapper(ImportMapper):
     def openerp_id(self, record):
         """ Will bind the category on a existing one with the same name."""
         existing = self.env['res.partner.category'].search(
-            [('name', '=', record['key'])],
+            [('shopware_key', '=', record['key'])],
             limit=1,
         )
         if existing:
