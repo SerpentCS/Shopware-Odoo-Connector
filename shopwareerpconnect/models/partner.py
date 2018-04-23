@@ -270,24 +270,24 @@ class PartnerImportMapper(ImportMapper):
     def names(self, record):
         # TODO create a glue module for base_surname
         parts = [part for part in (record['firstname'],
-                                   # record['middlename'],
                                    record['lastname']) if part]
         return {'name': ' '.join(parts)}
 
     @mapping
     def customer_group_id(self, record):
         # import customer groups
-        binder = self.binder_for(model='shopware.res.partner.category')
-        category_id = binder.to_openerp(record['shopId'], unwrap=True)
-
+        partner_cat_obj = self.env['res.partner.category']
+        category_id = partner_cat_obj.search(
+                        [('shopware_key', '=', record.get('groupKey'))],
+                        limit=1)
         if category_id is None:
             raise MappingError("The partner category with "
-                               "shopware id %s does not exist" %
-                               record['group_id'])
+                               "Shopware key %s does not exist" %
+                               record['groupKey'])
 
         # FIXME: should remove the previous tag (all the other tags from
         # the same backend)
-        return {'category_id': [(4, category_id)]}
+        return {'category_id': [(4, category_id.id)]}
 
     @mapping
     def shop_id(self, record):
@@ -321,7 +321,8 @@ class PartnerImportMapper(ImportMapper):
 
     @mapping
     def type(self, record):
-        return {'type': 'default'}
+        # There is no type as 'default' so replaced it with 'contact'
+        return {'type': 'contact'}
 
     @only_create
     @mapping
@@ -349,8 +350,25 @@ class PartnerImporter(ShopwareImporter):
     def _import_dependencies(self):
         """ Import the dependencies for the record"""
         record = self.shopware_record
-        self._import_dependency(record['shopId'],
-                                'shopware.res.partner.category')
+        # This is to get the CustomerGroup ID from shopware.
+        # Building Filters
+        filters = {}
+        filters[0] = {
+            'property': 'key',
+            'value': record.get('groupKey')
+        }
+        # Building Shopware Rest URL
+        # We limit the record using 'limit' keyword
+        # when there are multiple groups with same key
+        resource = "CustomerGroupsSearch?limit=1"
+        # Arranging the filters as per Shopware standard
+        filter = {'filter': filters}
+        # Searching for CustomerGroup with specific filters
+        res = self.backend_adapter._call(resource, filter)
+        # Skip CustomerGroup import, If result is none.
+        if res.get('data'):
+            self._import_dependency(res.get('data')[0],
+                                    'shopware.res.partner.category')
 
     def _after_import(self, partner_binding):
         """ Import the addresses """
@@ -640,7 +658,6 @@ class AddressImportMapper(BaseAddressImportMapper):
     def names(self, record):
         # TODO create a glue module for base_surname
         parts = [part for part in (record['firstname'],
-                                   record.get('middlename'),
                                    record['lastname']) if part]
         return {'name': ' '.join(parts)}
 
