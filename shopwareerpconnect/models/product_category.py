@@ -89,9 +89,11 @@ class ProductCategoryAdapter(GenericAdapter):
         if self.backend_record.write_uid.tz:
             local_tz = pytz.timezone(self.backend_record.write_uid.tz)
             if from_date is not None:
-                from_date = from_date.replace(tzinfo=pytz.UTC).astimezone(local_tz)
+                from_date = from_date.replace(tzinfo=pytz.UTC).\
+                astimezone(local_tz)
             if to_date is not None:
-                to_date = to_date.replace(tzinfo=pytz.UTC, microsecond=0).astimezone(local_tz)
+                to_date = to_date.replace(tzinfo=pytz.UTC, microsecond=0).\
+                astimezone(local_tz)
 
         if from_date is not None:
             filters[0] = {
@@ -107,7 +109,6 @@ class ProductCategoryAdapter(GenericAdapter):
             }
 
         return super(ProductCategoryAdapter, self).search(filters)
-
 
     def move(self, categ_id, parent_id, after_categ_id=None):
         return self._call('%s.move' % self._shopware_model,

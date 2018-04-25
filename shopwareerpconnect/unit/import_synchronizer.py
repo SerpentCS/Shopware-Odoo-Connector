@@ -363,6 +363,8 @@ class AddCheckpoint(ConnectorUnit):
 
     _model_name = ['shopware.product.product',
                    'shopware.product.category',
+                   'shopware.res.partner',
+                   'shopware.res.partner.category',
                    ]
 
     def run(self, openerp_binding_id):

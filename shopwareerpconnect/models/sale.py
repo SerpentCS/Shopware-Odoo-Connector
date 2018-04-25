@@ -288,19 +288,38 @@ class SaleOrderAdapter(GenericAdapter):
         """
         if filters is None:
             filters = {}
-        dt_fmt = MAGENTO_DATETIME_FORMAT
-        if from_date is not None:
-            filters.setdefault('created_at', {})
-            filters['created_at']['from'] = from_date.strftime(dt_fmt)
-        if to_date is not None:
-            filters.setdefault('created_at', {})
-            filters['created_at']['to'] = to_date.strftime(dt_fmt)
-        if shopware_shop_ids is not None:
-            filters['shop_id'] = {'in': shopware_shop_ids}
-
-        arguments = {'imported': False,
+#        dt_fmt = MAGENTO_DATETIME_FORMAT
+#        if from_date is not None:
+#            filters.setdefault('created_at', {})
+#            filters['created_at']['from'] = from_date.strftime(dt_fmt)
+#        if to_date is not None:
+#            filters.setdefault('created_at', {})
+#            filters['created_at']['to'] = to_date.strftime(dt_fmt)
+#        if shopware_shop_ids is not None:
+#            filters['shopId'] = {'in': shopware_shop_ids}
+        index = 0
+#        if from_date is not None:
+#            filters[index] = {
+#                'property': 'ordertime',
+#                'expression': '>=',
+#                'value': from_date.isoformat()
+#            }
+#            index += 1
+#        if to_date is not None:
+#            filters[index] = {
+#                'property': 'ordertime',
+#                'expression': '<=',
+#                'value': to_date.isoformat()
+#            }
+#            index += 1
+#        if shopware_shop_ids:
+#            filters[index] = {
+#                    'property': 'shopId',
+#                    'value': int(shopware_shop_ids[0])
+#                }
+        arguments = {#'imported': False,
                      # 'limit': 200,
-                     'filters': filters,
+                     #'filters': filters,
                      }
         return super(SaleOrderAdapter, self).search(arguments)
 
@@ -309,9 +328,8 @@ class SaleOrderAdapter(GenericAdapter):
 
         :rtype: dict
         """
-        record = self._call('%s.info' % self._shopware_model,
-                            [id, attributes])
-        return record
+        return self._call('%s' % self._shopware_model + '/' + str(id),
+                          {'attributes': attributes})
 
     def get_parent(self, id):
         return self._call('%s.get_parent' % self._shopware_model, [id])
@@ -334,7 +352,7 @@ class SaleOrderBatchImport(DelayedBatchImporter):
         """ Run the synchronization """
         if filters is None:
             filters = {}
-        filters['state'] = {'neq': 'canceled'}
+        #filters['state'] = {'neq': 'canceled'}
         from_date = filters.pop('from_date', None)
         to_date = filters.pop('to_date', None)
         shopware_shop_ids = [filters.pop('shopware_shop_id')]
@@ -757,10 +775,10 @@ class SaleOrderImporter(ShopwareImporter):
         record = super(SaleOrderImporter, self)._get_shopware_data()
         # sometimes we don't have shop_id...
         # we fix the record!
-        if not record.get('shop_id'):
+        if not record.get('shopId'):
             shop = self._get_shop(record)
             # deduce it from the shop
-            record['shop_id'] = shop.shop_id.shop_id.shopware_id
+            record['shopId'] = shop.shop_id.shop_id.shopware_id
         # sometimes we need to clean shopware items (ex : configurable
         # product in a sale)
         record = self._clean_shopware_items(record)
@@ -777,7 +795,7 @@ class SaleOrderImporter(ShopwareImporter):
         # common)
         if (is_guest_order or not record.get('customer_id')):
             shop_binder = self.binder_for('shopware.shop')
-            oe_shop_id = shop_binder.to_openerp(record['shop_id'])
+            oe_shop_id = shop_binder.to_openerp(record['shopId'])
 
             # search an existing partner with the same email
             partner = self.env['shopware.res.partner'].search(
@@ -830,13 +848,13 @@ class SaleOrderImporter(ShopwareImporter):
                 'taxvat': record.get('customer_taxvat'),
                 'group_id': customer_group,
                 'gender': record.get('customer_gender'),
-                'shop_id': record['shop_id'],
+                'shop_id': record['shopId'],
                 'created_at': normalize_datetime('created_at')(self,
                                                                record, ''),
                 'updated_at': False,
                 'created_in': False,
                 'dob': record.get('customer_dob'),
-                'shop_id': record.get('shop_id'),
+                'shop_id': record.get('shopId'),
             }
             mapper = self.unit_for(PartnerImportMapper,
                                    model='shopware.res.partner')
