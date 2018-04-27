@@ -262,7 +262,7 @@ class ShopwareBackend(models.Model):
 
     @api.multi
     def import_articles(self):
-        self._import_from_date('shopware.article',
+        self._import_from_date('shopware.product.product',
                                'import_products_from_date')
         return True
 
@@ -475,11 +475,11 @@ class ShopwareShop(models.Model):
                               "sales orders", shop.name)
                 continue
             backend_id = shop.backend_id.id
-            if shop.import_orders_from_date:
-                from_string = fields.Datetime.from_string
-                from_date = from_string(shop.import_orders_from_date)
-            else:
-                from_date = None
+#            if shop.import_orders_from_date:
+#                from_string = fields.Datetime.from_string
+#                from_date = from_string(shop.import_orders_from_date)
+#            else:
+            from_date = None
             sale_order_import_batch.delay(
                 session,
                 'shopware.sale.order',
