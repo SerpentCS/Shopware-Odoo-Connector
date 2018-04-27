@@ -188,7 +188,7 @@ class GenericAdapter(ShopwareCRUDAdapter):
         :rtype: dict
         """
         return self._call('%s' % self._shopware_model + '/' + str(id),
-                          {'attributes' : attributes})
+                          {'attributes': attributes})
 
     def search_read(self, filters=None):
         """ Search records according to some criterias

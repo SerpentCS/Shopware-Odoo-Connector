@@ -37,6 +37,7 @@ from ..unit.backend_adapter import (GenericAdapter,
                                    )
 from ..unit.import_synchronizer import (DelayedBatchImporter,
                                        ShopwareImporter,
+                                       AddCheckpoint,
                                        )
 from ..unit.mapper import normalize_datetime
 from .backend import shopware
@@ -251,7 +252,7 @@ class PartnerImportMapper(ImportMapper):
 
     direct = [
         ('email', 'email'),
-        ('dob', 'birthday'),
+        ('birthday', 'birthday'),
         (normalize_datetime('created_at'), 'created_at'),
         (normalize_datetime('updated_at'), 'updated_at'),
         ('email', 'emailid'),
@@ -270,24 +271,24 @@ class PartnerImportMapper(ImportMapper):
     def names(self, record):
         # TODO create a glue module for base_surname
         parts = [part for part in (record['firstname'],
-                                   # record['middlename'],
                                    record['lastname']) if part]
         return {'name': ' '.join(parts)}
 
     @mapping
     def customer_group_id(self, record):
         # import customer groups
-        binder = self.binder_for(model='shopware.res.partner.category')
-        category_id = binder.to_openerp(record['shopId'], unwrap=True)
-
+        partner_cat_obj = self.env['res.partner.category']
+        category_id = partner_cat_obj.search(
+                        [('shopware_key', '=', record.get('groupKey'))],
+                        limit=1)
         if category_id is None:
             raise MappingError("The partner category with "
-                               "shopware id %s does not exist" %
-                               record['group_id'])
+                               "Shopware key %s does not exist" %
+                               record['groupKey'])
 
         # FIXME: should remove the previous tag (all the other tags from
         # the same backend)
-        return {'category_id': [(4, category_id)]}
+        return {'category_id': [(4, category_id.id)]}
 
     @mapping
     def shop_id(self, record):
@@ -321,7 +322,8 @@ class PartnerImportMapper(ImportMapper):
 
     @mapping
     def type(self, record):
-        return {'type': 'default'}
+        # There is no type as 'default' so replaced it with 'contact'
+        return {'type': 'contact'}
 
     @only_create
     @mapping
@@ -339,6 +341,126 @@ class PartnerImportMapper(ImportMapper):
         if partner:
             return {'openerp_id': partner.id}
 
+    @mapping
+    def email(self, record):
+        if record['email']:
+            return {'email': record['email'] or None}
+
+    @mapping
+    def address(self, record):
+        """
+        This method maps the address data
+        @param: record (Shopware data)
+        @return: vals (dictionary values)
+        """
+        if record:
+            type = None
+            if record['defaultBillingAddress']:
+                type = 'defaultBillingAddress'
+            elif record['defaultShippingAddress']:
+                type = 'defaultShippingAddress'
+            vals = self.get_address(record, type) if type else {}
+            # Replacing the values.
+            del vals['name']
+            return vals
+
+    @only_create
+    @mapping
+    def map_address(self, record):
+        """
+        This method creates billing and shipping addresses.
+        @param: record (Shopware customer dict values)
+        @return: child_ids
+        """
+        address = list()
+        if record['defaultBillingAddress']['id'] != \
+        record['defaultShippingAddress']['id']:
+            vals = {
+               'customer': False,
+               'is_company': False,
+                }
+            #Fetching Billing address
+            if record['defaultBillingAddress']:
+                bill_vals = self.get_address(record, 'defaultBillingAddress')
+                bill_vals.update(vals)
+                bill_vals.update({'type': 'invoice'})
+                address.append((0, 0, bill_vals))
+            #Fetching Shipping address
+            if record['defaultShippingAddress']:
+                ship_vals = self.get_address(record, 'defaultShippingAddress')
+                ship_vals.update(vals)
+                ship_vals.update({'type': 'delivery'})
+                address.append((0, 0, ship_vals))
+        return address and {'child_ids': address}
+
+    def get_address(self, record, type):
+        """
+        This method is gives the address values as per the type.
+        @param: record (Shopware customer dict values)
+        @param: type (billing/shipping)
+        @return: address values (as dictionary)
+        """
+        vals = dict()
+        if record[type]:
+            rec = record[type]
+            # Fetching Normal data
+            name = rec['firstname'] if rec['firstname'] else ''
+            name = name + " " + rec['lastname'] if rec['lastname'] else ''
+            vals.update(
+                {'name': name,
+                 'type': 'contact',
+                 'phone': rec['phone'] or False,
+                 'city': rec['city'] or False,
+                 'zip': rec['zipcode'] or False,
+                 'street': rec['additionalAddressLine1'] or False,
+                 'street2': rec['additionalAddressLine2'] or False,
+                 'company': rec['company']
+                }
+            )
+            # Fetching country
+            vals.update(self.get_country(rec['country']))
+            # Fetching State
+            vals.update(self.get_state(rec))
+        return vals
+
+    def get_country(self, country=None):
+        """
+        This method gives the country of Openerp.
+        @param: country (Shopware country data)
+        @return: country_id (Openerp id)
+        """
+        country_id = False
+        if country and country['iso']:
+            country_id = self.env['res.country'].search(
+                [('code', '=', country['iso'])])
+            country_id = country_id.id
+        return {'country_id': country_id}
+
+    def get_state(self, rec=None):
+        """
+        This method gives the State of Openerp.
+        @param: rec (Shopware rec data)
+        @return: state_id (Openerp id)
+        """
+        state_id = False
+        if rec and rec['state']:
+            state_id = self.env['res.country.state'].search(
+                [('code', '=', rec['state']['shortCode'])],
+                limit=1
+                )
+            if not state_id and rec['country']:
+                country_id = self.env['res.country'].search(
+                    [('code', '=', rec['country']['iso'])],
+                    limit=1
+                    )
+                state_id = self.env['res.country.state'].create(
+                    {'name': rec['state']['name'],
+                     'code': rec['state']['shortCode'],
+                     'country_id': country_id.id
+                     })
+            state_id = state_id and state_id.id or False
+        return {'state_id': state_id}
+
 
 @shopware
 class PartnerImporter(ShopwareImporter):
@@ -349,314 +471,336 @@ class PartnerImporter(ShopwareImporter):
     def _import_dependencies(self):
         """ Import the dependencies for the record"""
         record = self.shopware_record
-        self._import_dependency(record['shopId'],
-                                'shopware.res.partner.category')
+        # This is to get the CustomerGroup ID from shopware.
+        # Building Filters
+        filters = {}
+        filters[0] = {
+            'property': 'key',
+            'value': record.get('groupKey')
+        }
+        # Building Shopware Rest URL
+        # We limit the record using 'limit' keyword
+        # when there are multiple groups with same key
+        resource = "CustomerGroupsSearch?limit=1"
+        # Arranging the filters as per Shopware standard
+        filter = {'filter': filters}
+        # Searching for CustomerGroup with specific filters
+        res = self.backend_adapter._call(resource, filter)
+        # Skip CustomerGroup import, If result is none.
+        if res.get('data'):
+            self._import_dependency(res.get('data')[0],
+                                    'shopware.res.partner.category')
+
+    def _create(self, data):
+        openerp_binding = super(PartnerImporter, self)._create(data)
+        checkpoint = self.unit_for(AddCheckpoint)
+        checkpoint.run(openerp_binding.id)
+        return openerp_binding
 
     def _after_import(self, partner_binding):
         """ Import the addresses """
-        book = self.unit_for(PartnerAddressBook, model='shopware.address')
-        book.import_addresses(self.shopware_id, partner_binding.id)
+#        book = self.unit_for(PartnerAddressBook, model='shopware.address')
+#        book.import_addresses(self.shopware_id, partner_binding.id)
 
 
 PartnerImport = PartnerImporter  # deprecated
 
 
-AddressInfos = namedtuple('AddressInfos', ['shopware_record',
-                                           'partner_binding_id',
-                                           'merge'])
-
-
-@shopware
-class PartnerAddressBook(ConnectorUnit):
-    """ Import all addresses from the address book of a customer.
-
-        This class is responsible to define which addresses should
-        be imported and how (merge with the partner or not...).
-        Then, it delegate the import to the appropriate importer.
-
-        This is really intricate. The datamodel are different between
-        Shopware and OpenERP and we have many uses cases to cover.
-
-        The first thing is that:
-            - we do not import companies and individuals the same manner
-            - we do not know if an account is a company -> we assume that
-              if we found something in the company field of the billing
-              address, the whole account is a company.
-
-        Differences:
-            - Individuals: we merge the billing address with the partner,
-              so we'll end with 1 entity if the customer has 1 address
-            - Companies: we never merge the addresses with the partner,
-              but we use the company name of the billing address as name
-              of the partner. We also copy the address informations from
-              the billing address as default values.
-
-        More information on:
-        https://bugs.launchpad.net/openerp-connector/+bug/1193281
-    """
-    _model_name = 'shopware.address'
-
-    def import_addresses(self, shopware_partner_id, partner_binding_id):
-        addresses = self._get_address_infos(shopware_partner_id,
-                                            partner_binding_id)
-        for address_id, infos in addresses:
-            importer = self.unit_for(ShopwareImporter)
-            importer.run(address_id, address_infos=infos)
-
-    def _get_address_infos(self, shopware_partner_id, partner_binding_id):
-        adapter = self.unit_for(BackendAdapter)
-        mag_address_ids = adapter.search({'customer_id':
-                                          {'eq': shopware_partner_id}})
-        if not mag_address_ids:
-            return
-        for address_id in mag_address_ids:
-            shopware_record = adapter.read(address_id)
-
-            # defines if the billing address is merged with the partner
-            # or imported as a standalone contact
-            merge = False
-            if shopware_record.get('is_default_billing'):
-                binding_model = self.env['shopware.res.partner']
-                partner_binding = binding_model.browse(partner_binding_id)
-                if shopware_record.get('company'):
-                    # when a company is there, we never merge the contact
-                    # with the partner.
-                    # Copy the billing address on the company
-                    # and use the name of the company for the name
-                    company_mapper = self.unit_for(CompanyImportMapper,
-                                                   model='shopware.res.partner')
-                    map_record = company_mapper.map_record(shopware_record)
-                    parent = partner_binding.openerp_id.parent_id
-                    values = map_record.values(parent_partner=parent)
-                    partner_binding.write(values)
-                else:
-                    # for B2C individual customers, merge with the main
-                    # partner
-                    merge = True
-                    # in the case if the billing address no longer
-                    # has a company, reset the flag
-                    partner_binding.write({'consider_as_company': False})
-            address_infos = AddressInfos(shopware_record=shopware_record,
-                                         partner_binding_id=partner_binding_id,
-                                         merge=merge)
-            yield address_id, address_infos
-
-
-class BaseAddressImportMapper(ImportMapper):
-    """ Defines the base mappings for the imports
-    in ``res.partner`` (state, country, ...)
-    """
-    direct = [('postcode', 'zip'),
-              ('city', 'city'),
-              ('telephone', 'phone'),
-              ('fax', 'fax'),
-              ('company', 'company'),
-              ]
-
-    @mapping
-    def state(self, record):
-        if not record.get('region'):
-            return
-        state = self.env['res.country.state'].search(
-            [('name', '=ilike', record['region'])],
-            limit=1,
-        )
-        if state:
-            return {'state_id': state.id}
-
-    @mapping
-    def country(self, record):
-        if not record.get('country_id'):
-            return
-        country = self.env['res.country'].search(
-            [('code', '=', record['country_id'])],
-            limit=1,
-        )
-        if country:
-            return {'country_id': country.id}
-
-    @mapping
-    def street(self, record):
-        value = record['street']
-        if not value:
-            return {}
-        lines = [line.strip() for line in value.split('\n') if line.strip()]
-        if len(lines) == 1:
-            result = {'street': lines[0], 'street2': False}
-        elif len(lines) >= 2:
-            result = {'street': lines[0], 'street2': u' - '.join(lines[1:])}
-        else:
-            result = {}
-        return result
-
-    @mapping
-    def title(self, record):
-        prefix = record['prefix']
-        if not prefix:
-            return
-        title = self.env['res.partner.title'].search(
-            [('domain', '=', 'contact'),
-             ('shortcut', '=ilike', prefix)],
-            limit=1
-        )
-        if not title:
-            title = self.env['res.partner.title'].create(
-                {'domain': 'contact',
-                 'shortcut': prefix,
-                 'name': prefix,
-                 }
-            )
-        return {'title': title.id}
-
-    @only_create
-    @mapping
-    def company_id(self, record):
-        parent = self.options.parent_partner
-        if parent:
-            if parent.company_id:
-                return {'company_id': parent.company_id.id}
-            else:
-                return {'company_id': False}
-        # Don't return anything, we are merging into an existing partner
-        return
-
-
-@shopware
-class CompanyImportMapper(BaseAddressImportMapper):
-    """ Special mapping used when we import a company.
-    A company is considered as such when the billing address
-    of an account has something in the 'company' field.
-
-    This is a very special mapping not used in the same way
-    than the other.
-
-    The billing address will exist as a contact,
-    but we want to *copy* the data on the company.
-
-    The input record is the billing address.
-    The mapper returns data which will be written on the
-    main partner, in other words, the company.
-
-    The ``@only_create`` decorator would not have any
-    effect here because the mapper is always called
-    for updates.
-    """
-    _model_name = 'shopware.res.partner'
-
-    direct = BaseAddressImportMapper.direct + [
-        ('company', 'name'),
-    ]
-
-    @mapping
-    def consider_as_company(self, record):
-        return {'consider_as_company': True}
-
-
-@shopware
-class AddressAdapter(GenericAdapter):
-    _model_name = 'shopware.address'
-    _shopware_model = 'addresses'
-
-    def search(self, filters=None):
-        """ Search records according to some criterias
-        and returns a list of ids
-
-        :rtype: list
-        """
-        return [int(row['customer_address_id']) for row
-                in self._call('%s.list' % self._shopware_model,
-                              [filters] if filters else [{}])]
-
-    def create(self, customer_id, data):
-        """ Create a record on the external system """
-        return self._call('%s.create' % self._shopware_model,
-                          [customer_id, data])
-
-
-@shopware
-class AddressImporter(ShopwareImporter):
-    _model_name = ['shopware.address']
-
-    def run(self, shopware_id, address_infos=None, force=False):
-        """ Run the synchronization """
-        if address_infos is None:
-            # only possible for updates
-            self.address_infos = AddressInfos(None, None, None)
-        else:
-            self.address_infos = address_infos
-        return super(AddressImporter, self).run(shopware_id, force=force)
-
-    def _get_shopware_data(self):
-        """ Return the raw Shopware data for ``self.shopware_id`` """
-        # we already read the data from the Partner Importer
-        if self.address_infos.shopware_record:
-            return self.address_infos.shopware_record
-        else:
-            return super(AddressImporter, self)._get_shopware_data()
-
-    def _define_partner_relationship(self, data):
-        """ Link address with partner or parent company. """
-        partner_binding_id = self.address_infos.partner_binding_id
-        assert partner_binding_id, ("AdressInfos are required for creation of "
-                                    "a new address.")
-        binder = self.binder_for('shopware.res.partner')
-        partner = binder.unwrap_binding(partner_binding_id, browse=True)
-        if self.address_infos.merge:
-            # it won't be imported as an independent address,
-            # but will be linked with the main res.partner
-            data['openerp_id'] = partner.id
-            data['type'] = 'default'
-        else:
-            data['parent_id'] = partner.id
-            data['lang'] = partner.lang
-        data['shopware_partner_id'] = self.address_infos.partner_binding_id
-        return data
-
-    def _create(self, data):
-        data = self._define_partner_relationship(data)
-        return super(AddressImporter, self)._create(data)
-
-
-AddressImport = AddressImporter  # deprecated
-
-
-@shopware
-class AddressImportMapper(BaseAddressImportMapper):
-    _model_name = 'shopware.address'
-
-# TODO fields not mapped:
-#   "suffix"=>"a",
-#   "vat_id"=>"12334",
-
-    direct = BaseAddressImportMapper.direct + [
-        ('created_at', 'created_at'),
-        ('updated_at', 'updated_at'),
-        ('is_default_billing', 'is_default_billing'),
-        ('is_default_shipping', 'is_default_shipping'),
-        ('company', 'company'),
-    ]
-
-    @mapping
-    def names(self, record):
-        # TODO create a glue module for base_surname
-        parts = [part for part in (record['firstname'],
-                                   record.get('middlename'),
-                                   record['lastname']) if part]
-        return {'name': ' '.join(parts)}
-
-    @mapping
-    def use_parent_address(self, record):
-        return {'use_parent_address': False}
-
-    @mapping
-    def type(self, record):
-        if record.get('is_default_billing'):
-            address_type = 'invoice'
-        elif record.get('is_default_shipping'):
-            address_type = 'delivery'
-        else:
-            address_type = 'contact'
-        return {'type': address_type}
+#AddressInfos = namedtuple('AddressInfos', ['shopware_record',
+#                                           'partner_binding_id',
+#                                           'merge'])
+#
+#
+#@shopware
+#class PartnerAddressBook(ConnectorUnit):
+#    """ Import all addresses from the address book of a customer.
+#
+#        This class is responsible to define which addresses should
+#        be imported and how (merge with the partner or not...).
+#        Then, it delegate the import to the appropriate importer.
+#
+#        This is really intricate. The datamodel are different between
+#        Shopware and OpenERP and we have many uses cases to cover.
+#
+#        The first thing is that:
+#            - we do not import companies and individuals the same manner
+#            - we do not know if an account is a company -> we assume that
+#              if we found something in the company field of the billing
+#              address, the whole account is a company.
+#
+#        Differences:
+#            - Individuals: we merge the billing address with the partner,
+#              so we'll end with 1 entity if the customer has 1 address
+#            - Companies: we never merge the addresses with the partner,
+#              but we use the company name of the billing address as name
+#              of the partner. We also copy the address informations from
+#              the billing address as default values.
+#
+#        More information on:
+#        https://bugs.launchpad.net/openerp-connector/+bug/1193281
+#    """
+#    _model_name = 'shopware.address'
+#
+#    def import_addresses(self, shopware_partner_id, partner_binding_id):
+#        addresses = self._get_address_infos(shopware_partner_id,
+#                                            partner_binding_id)
+#        for address_id, infos in addresses:
+#            importer = self.unit_for(ShopwareImporter)
+#            importer.run(address_id, address_infos=infos)
+#
+#    def _get_address_infos(self, shopware_partner_id, partner_binding_id):
+#        adapter = self.unit_for(BackendAdapter)
+#        mag_address_ids = adapter.search({'customer_id':
+#                                          {'eq': shopware_partner_id}})
+#        if not mag_address_ids:
+#            return
+#        for address_id in mag_address_ids:
+#            shopware_record = adapter.read(address_id)
+#
+#            # defines if the billing address is merged with the partner
+#            # or imported as a standalone contact
+#            merge = False
+#            if shopware_record.get('is_default_billing'):
+#                binding_model = self.env['shopware.res.partner']
+#                partner_binding = binding_model.browse(partner_binding_id)
+#                if shopware_record.get('company'):
+#                    # when a company is there, we never merge the contact
+#                    # with the partner.
+#                    # Copy the billing address on the company
+#                    # and use the name of the company for the name
+#                    company_mapper = self.unit_for(CompanyImportMapper,
+#                                                   model='shopware.res.partner')
+#                    map_record = company_mapper.map_record(shopware_record)
+#                    parent = partner_binding.openerp_id.parent_id
+#                    values = map_record.values(parent_partner=parent)
+#                    partner_binding.write(values)
+#                else:
+#                    # for B2C individual customers, merge with the main
+#                    # partner
+#                    merge = True
+#                    # in the case if the billing address no longer
+#                    # has a company, reset the flag
+#                    partner_binding.write({'consider_as_company': False})
+#            address_infos = AddressInfos(shopware_record=shopware_record,
+#                                         partner_binding_id=partner_binding_id,
+#                                         merge=merge)
+#            yield address_id, address_infos
+#
+#
+#class BaseAddressImportMapper(ImportMapper):
+#    """ Defines the base mappings for the imports
+#    in ``res.partner`` (state, country, ...)
+#    """
+#    direct = [('postcode', 'zip'),
+#              ('city', 'city'),
+#              ('telephone', 'phone'),
+#              ('fax', 'fax'),
+#              ('company', 'company'),
+#              ]
+#
+#    @mapping
+#    def state(self, record):
+#        if not record.get('region'):
+#            return
+#        state = self.env['res.country.state'].search(
+#            [('name', '=ilike', record['region'])],
+#            limit=1,
+#        )
+#        if state:
+#            return {'state_id': state.id}
+#
+#    @mapping
+#    def country(self, record):
+#        if not record.get('country_id'):
+#            return
+#        country = self.env['res.country'].search(
+#            [('code', '=', record['country_id'])],
+#            limit=1,
+#        )
+#        if country:
+#            return {'country_id': country.id}
+#
+#    @mapping
+#    def street(self, record):
+#        value = record['street']
+#        if not value:
+#            return {}
+#        lines = [line.strip() for line in value.split('\n') if line.strip()]
+#        if len(lines) == 1:
+#            result = {'street': lines[0], 'street2': False}
+#        elif len(lines) >= 2:
+#            result = {'street': lines[0], 'street2': u' - '.join(lines[1:])}
+#        else:
+#            result = {}
+#        return result
+#
+#    @mapping
+#    def title(self, record):
+#        prefix = record['prefix']
+#        if not prefix:
+#            return
+#        title = self.env['res.partner.title'].search(
+#            [('domain', '=', 'contact'),
+#             ('shortcut', '=ilike', prefix)],
+#            limit=1
+#        )
+#        if not title:
+#            title = self.env['res.partner.title'].create(
+#                {'domain': 'contact',
+#                 'shortcut': prefix,
+#                 'name': prefix,
+#                 }
+#            )
+#        return {'title': title.id}
+#
+#    @only_create
+#    @mapping
+#    def company_id(self, record):
+#        parent = self.options.parent_partner
+#        if parent:
+#            if parent.company_id:
+#                return {'company_id': parent.company_id.id}
+#            else:
+#                return {'company_id': False}
+#        # Don't return anything, we are merging into an existing partner
+#        return
+#
+#
+#@shopware
+#class CompanyImportMapper(BaseAddressImportMapper):
+#    """ Special mapping used when we import a company.
+#    A company is considered as such when the billing address
+#    of an account has something in the 'company' field.
+#
+#    This is a very special mapping not used in the same way
+#    than the other.
+#
+#    The billing address will exist as a contact,
+#    but we want to *copy* the data on the company.
+#
+#    The input record is the billing address.
+#    The mapper returns data which will be written on the
+#    main partner, in other words, the company.
+#
+#    The ``@only_create`` decorator would not have any
+#    effect here because the mapper is always called
+#    for updates.
+#    """
+#    _model_name = 'shopware.res.partner'
+#
+#    direct = BaseAddressImportMapper.direct + [
+#        ('company', 'name'),
+#    ]
+#
+#    @mapping
+#    def consider_as_company(self, record):
+#        return {'consider_as_company': True}
+#
+#
+#@shopware
+#class AddressAdapter(GenericAdapter):
+#    _model_name = 'shopware.address'
+#    _shopware_model = 'addresses'
+#
+#    def search(self, filters=None):
+#        """ Search records according to some criterias
+#        and returns a list of ids
+#
+#        :rtype: list
+#        """
+#        return [int(row['customer_address_id']) for row
+#                in self._call('%s.list' % self._shopware_model,
+#                              [filters] if filters else [{}])]
+#
+#    def create(self, customer_id, data):
+#        """ Create a record on the external system """
+#        return self._call('%s.create' % self._shopware_model,
+#                          [customer_id, data])
+#
+#
+#@shopware
+#class AddressImporter(ShopwareImporter):
+#    _model_name = ['shopware.address']
+#
+#    def run(self, shopware_id, address_infos=None, force=False):
+#        """ Run the synchronization """
+#        if address_infos is None:
+#            # only possible for updates
+#            self.address_infos = AddressInfos(None, None, None)
+#        else:
+#            self.address_infos = address_infos
+#        return super(AddressImporter, self).run(shopware_id, force=force)
+#
+#    def _get_shopware_data(self):
+#        """ Return the raw Shopware data for ``self.shopware_id`` """
+#        # we already read the data from the Partner Importer
+#        if self.address_infos.shopware_record:
+#            return self.address_infos.shopware_record
+#        else:
+#            return super(AddressImporter, self)._get_shopware_data()
+#
+#    def _define_partner_relationship(self, data):
+#        """ Link address with partner or parent company. """
+#        partner_binding_id = self.address_infos.partner_binding_id
+#        assert partner_binding_id, ("AdressInfos are required for creation of "
+#                                    "a new address.")
+#        binder = self.binder_for('shopware.res.partner')
+#        partner = binder.unwrap_binding(partner_binding_id, browse=True)
+#        if self.address_infos.merge:
+#            # it won't be imported as an independent address,
+#            # but will be linked with the main res.partner
+#            data['openerp_id'] = partner.id
+#            data['type'] = 'default'
+#        else:
+#            data['parent_id'] = partner.id
+#            data['lang'] = partner.lang
+#        data['shopware_partner_id'] = self.address_infos.partner_binding_id
+#        return data
+#
+#    def _create(self, data):
+#        data = self._define_partner_relationship(data)
+#        return super(AddressImporter, self)._create(data)
+#
+#
+#AddressImport = AddressImporter  # deprecated
+#
+#
+#@shopware
+#class AddressImportMapper(BaseAddressImportMapper):
+#    _model_name = 'shopware.address'
+#
+## TODO fields not mapped:
+##   "suffix"=>"a",
+##   "vat_id"=>"12334",
+#
+#    direct = BaseAddressImportMapper.direct + [
+#        ('created_at', 'created_at'),
+#        ('updated_at', 'updated_at'),
+#        ('is_default_billing', 'is_default_billing'),
+#        ('is_default_shipping', 'is_default_shipping'),
+#        ('company', 'company'),
+#    ]
+#
+#    @mapping
+#    def names(self, record):
+#        # TODO create a glue module for base_surname
+#        parts = [part for part in (record['firstname'],
+#                                   record['lastname']) if part]
+#        return {'name': ' '.join(parts)}
+#
+#    @mapping
+#    def use_parent_address(self, record):
+#        return {'use_parent_address': False}
+#
+#    @mapping
+#    def type(self, record):
+#        if record.get('is_default_billing'):
+#            address_type = 'invoice'
+#        elif record.get('is_default_shipping'):
+#            address_type = 'delivery'
+#        else:
+#            address_type = 'contact'
+#        return {'type': address_type}
 
 
 @job(default_channel='root.shopware')

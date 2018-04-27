@@ -481,7 +481,7 @@ class ProductImportMapper(ImportMapper):
     direct = [('number', 'default_code'),
               ('additionalText', 'description_sale'),
               ('active', 'active'),
-              ('ean', 'ean13'),
+#              ('ean', 'ean13'),
               ('weight', 'weight'),
               ('articleId', 'shopware_article_id')]
 
@@ -597,8 +597,8 @@ class IsActiveProductImportMapper(ImportMapper):
     def is_active(self, record):
         """Check if the product is active in Shopware
         and set active flag in OpenERP
-        status == 1 in Shopware means active"""
-        return {'active': (record.get('status') == '1')}
+        status == true in Shopware means active"""
+        return {'active': (record.get('active') == 'true')}
 
 
 @shopware
