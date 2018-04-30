@@ -45,7 +45,7 @@ class ShopwareModelBinder(ShopwareBinder):
         'shopware.address',
         'shopware.res.partner.category',
         'shopware.product.category',
-        'shopware.article',
+        #'shopware.article',
         'shopware.product.product',
         'shopware.stock.picking',
         'shopware.sale.order',

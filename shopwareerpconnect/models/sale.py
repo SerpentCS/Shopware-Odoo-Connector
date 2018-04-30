@@ -312,16 +312,22 @@ class SaleOrderAdapter(GenericAdapter):
 #                'value': to_date.isoformat()
 #            }
 #            index += 1
-#        if shopware_shop_ids:
-#            filters[index] = {
-#                    'property': 'shopId',
-#                    'value': int(shopware_shop_ids[0])
-#                }
-        arguments = {#'imported': False,
-                     # 'limit': 200,
-                     #'filters': filters,
-                     }
-        return super(SaleOrderAdapter, self).search(arguments)
+        if shopware_shop_ids:
+            filters[index] = {
+                    'property': 'shopId',
+                    'value': int(shopware_shop_ids[0])
+                }
+            index += 1
+#        filters[index] = {
+#            'property': 'orderStatusId',
+#            #'expression': '==',
+#            'value': 0
+#        }
+#        arguments = {#'imported': False,
+#                      'limit': 200,
+#                     'filters': filters,
+#                     }
+        return super(SaleOrderAdapter, self).search(filters)
 
     def read(self, id, attributes=None):
         """ Returns the information of a record
@@ -356,15 +362,16 @@ class SaleOrderBatchImport(DelayedBatchImporter):
         from_date = filters.pop('from_date', None)
         to_date = filters.pop('to_date', None)
         shopware_shop_ids = [filters.pop('shopware_shop_id')]
-        record_ids = self.backend_adapter.search(
+        records = self.backend_adapter.search(
             filters,
             from_date=from_date,
             to_date=to_date,
             shopware_shop_ids=shopware_shop_ids)
+        res_ids = [rec['id'] for rec in records if rec['orderStatusId'] >= 0]
         _logger.info('search for shopware saleorders %s returned %s',
-                     filters, record_ids)
-        for record_id in record_ids:
-            self._import_record(record_id)
+                     filters, res_ids)
+        for res_id in res_ids:
+            self._import_record(res_id)
 
 
 @shopware
@@ -421,24 +428,24 @@ class SaleImportRule(ConnectorUnit):
 
         :returns: True if the sale order should be imported
         :rtype: boolean
-        """
-        payment_method = record['payment']['method']
-        method = self.env['payment.method'].search(
-            [('name', '=', payment_method)],
-            limit=1,
-        )
-        if not method:
-            raise FailedJobError(
-                "The configuration is missing for the Payment Method '%s'.\n\n"
-                "Resolution:\n"
-                "- Go to "
-                "'Sales > Configuration > Sales > Customer Payment Method\n"
-                "- Create a new Payment Method with name '%s'\n"
-                "-Eventually  link the Payment Method to an existing Workflow "
-                "Process or create a new one." % (payment_method,
-                                                  payment_method))
-        self._rule_global(record, method)
-        self._rules[method.import_rule](self, record, method)
+#        """
+#        payment_method = record['payment']['method']
+#        method = self.env['payment.method'].search(
+#            [('name', '=', payment_method)],
+#            limit=1,
+#        )
+#        if not method:
+#            raise FailedJobError(
+#                "The configuration is missing for the Payment Method '%s'.\n\n"
+#                "Resolution:\n"
+#                "- Go to "
+#                "'Sales > Configuration > Sales > Customer Payment Method\n"
+#                "- Create a new Payment Method with name '%s'\n"
+#                "-Eventually  link the Payment Method to an existing Workflow "
+#                "Process or create a new one." % (payment_method,
+#                                                  payment_method))
+#        self._rule_global(record, method)
+#        self._rules[method.import_rule](self, record, method)
 
 
 @shopware
@@ -457,11 +464,12 @@ class SaleOrderImportMapper(ImportMapper):
               ('order_id', 'shopware_order_id'),
               ('grand_total', 'total_amount'),
               ('tax_amount', 'total_amount_tax'),
-              (normalize_datetime('created_at'), 'date_order'),
+              (normalize_datetime('created_at'), 'orderTime'),
               ('shop_id', 'shop_id'),
               ]
 
-    children = [('items', 'shopware_order_line_ids', 'shopware.sale.order.line'),
+    children = [('details', 'shopware_order_line_ids',
+                 'shopware.sale.order.line'),
                 ]
 
     def _add_shipping_line(self, map_record, values):
@@ -514,47 +522,48 @@ class SaleOrderImportMapper(ImportMapper):
         values['order_line'].append(line)
         return values
 
-    def finalize(self, map_record, values):
-        values.setdefault('order_line', [])
-        values = self._add_shipping_line(map_record, values)
-        values = self._add_cash_on_delivery_line(map_record, values)
-        values = self._add_gift_certificate_line(map_record, values)
-        values.update({
-            'partner_id': self.options.partner_id,
-            'partner_invoice_id': self.options.partner_invoice_id,
-            'partner_shipping_id': self.options.partner_shipping_id,
-        })
-        onchange = self.unit_for(SaleOrderOnChange)
-        return onchange.play(values, values['shopware_order_line_ids'])
+#    def finalize(self, map_record, values):
+#        values.setdefault('order_line', [])
+#        values = self._add_shipping_line(map_record, values)
+#        values = self._add_cash_on_delivery_line(map_record, values)
+#        values = self._add_gift_certificate_line(map_record, values)
+#        values.update({
+#            'partner_id': self.options.partner_id,
+#            'partner_invoice_id': self.options.partner_invoice_id,
+#            'partner_shipping_id': self.options.partner_shipping_id,
+#        })
+#        onchange = self.unit_for(SaleOrderOnChange)
+#        return onchange.play(values, values['shopware_order_line_ids'])
 
-    @mapping
-    def name(self, record):
-        name = record['increment_id']
-        prefix = self.backend_record.sale_prefix
-        if prefix:
-            name = prefix + name
-        return {'name': name}
+#    @mapping
+#    def name(self, record):
+#        #name = record['increment_id']
+#        name = record['number']
+#        prefix = self.backend_record.sale_prefix
+#        if prefix:
+#            name = prefix + name
+#        return {'name': name}
 
     @mapping
     def customer_id(self, record):
         binder = self.binder_for('shopware.res.partner')
-        partner_id = binder.to_openerp(record['customer_id'], unwrap=True)
+        partner_id = binder.to_openerp(record['customerId'], unwrap=True)
         assert partner_id is not None, (
-            "customer_id %s should have been imported in "
-            "SaleOrderImporter._import_dependencies" % record['customer_id'])
+            "customerId %s should have been imported in "
+            "SaleOrderImporter._import_dependencies" % record['customerId'])
         return {'partner_id': partner_id}
 
-    @mapping
-    def payment(self, record):
-        record_method = record['payment']['method']
-        method = self.env['payment.method'].search(
-            [['name', '=', record_method]],
-            limit=1,
-        )
-        assert method, ("method %s should exist because the import fails "
-                        "in SaleOrderImporter._before_import when it is "
-                        " missing" % record['payment']['method'])
-        return {'payment_method_id': method.id}
+#    @mapping
+#    def payment(self, record):
+#        record_method = record['payment']['method']
+#        method = self.env['payment.method'].search(
+#            [['name', '=', record_method]],
+#            limit=1,
+#        )
+#        assert method, ("method %s should exist because the import fails "
+#                        "in SaleOrderImporter._before_import when it is "
+#                        " missing" % record['payment']['method'])
+#        return {'payment_method_id': method.id}
 
     @mapping
     def shipping_method(self, record):
@@ -580,23 +589,24 @@ class SaleOrderImportMapper(ImportMapper):
             result = {'carrier_id': carrier.id}
         return result
 
-    @mapping
-    def sales_team(self, record):
-        team = self.options.shop.section_id
-        if team:
-            return {'section_id': team.id}
+#    @mapping
+#    def sales_team(self, record):
+#        team = self.options.shop.section_id
+#        if team:
+#            return {'section_id': team.id}
 
-    @mapping
-    def project_id(self, record):
-        project_id = self.options.shop.account_analytic_id
-        if project_id:
-            return {'project_id': project_id.id}
+#    @mapping
+#    def project_id(self, record):
+#        project_id = self.options.shop.account_analytic_id
+#        if project_id:
+#            return {'project_id': project_id.id}
 
-    @mapping
-    def fiscal_position(self, record):
-        fiscal_position = self.options.shop.fiscal_position_id
-        if fiscal_position:
-            return {'fiscal_position': fiscal_position.id}
+#    @mapping
+#    def fiscal_position(self, record):
+#        self.options.shop.fiscal_position_id
+#        fiscal_position = self.options.shop.fiscal_position_id
+#        if fiscal_position:
+#            return {'fiscal_position': fiscal_position.id}
 
     # partner_id, partner_invoice_id, partner_shipping_id
     # are done in the importer
@@ -611,23 +621,36 @@ class SaleOrderImportMapper(ImportMapper):
         for the salespersons (access rules)"""
         return {'user_id': False}
 
-    @mapping
-    def sale_order_comment(self, record):
-        comment_mapper = self.unit_for(SaleOrderCommentImportMapper)
-        map_record = comment_mapper.map_record(record)
-        return map_record.values(**self.options)
+#    @mapping
+#    def sale_order_comment(self, record):
+#        comment_mapper = self.unit_for(SaleOrderCommentImportMapper)
+#        map_record = comment_mapper.map_record(record)
+#        return map_record.values(**self.options)
 
-    @mapping
-    def pricelist_id(self, record):
-        pricelist_mapper = self.unit_for(PricelistSaleOrderImportMapper)
-        return pricelist_mapper.map_record(record).values(**self.options)
+#    @mapping
+#    def pricelist_id(self, record):
+#        pricelist_mapper = self.unit_for(PricelistSaleOrderImportMapper)
+#        return pricelist_mapper.map_record(record).values(**self.options)
 
 
 @shopware
 class SaleOrderImporter(ShopwareImporter):
     _model_name = ['shopware.sale.order']
 
-    _base_mapper = SaleOrderImportMapper
+    #_base_mapper = SaleOrderImportMapper
+
+    def _import_dependencies(self):
+        record = self.shopware_record
+        #self._import_addresses()
+        #Customer Import
+        self._import_dependency(record['customerId'],
+                                        'shopware.res.partner')
+        #Product Import
+        for line in record.get('details', []):
+            _logger.debug('line: %s', line)
+            if 'articleId' in line:
+                self._import_dependency(line['articleId'],
+                                        'shopware.product.product')
 
     def _must_skip(self):
         """ Hook called right after we read the data from the backend.
@@ -656,25 +679,25 @@ class SaleOrderImporter(ShopwareImporter):
         child_items = {}  # key is the parent item id
         top_items = []
 
-        # Group the childs with their parent
-        for item in resource['items']:
-            if item.get('parent_item_id'):
-                child_items.setdefault(item['parent_item_id'], []).append(item)
-            else:
-                top_items.append(item)
-
-        all_items = []
-        for top_item in top_items:
-            if top_item['item_id'] in child_items:
-                item_modified = self._merge_sub_items(
-                    top_item['product_type'], top_item,
-                    child_items[top_item['item_id']])
-                if not isinstance(item_modified, list):
-                    item_modified = [item_modified]
-                all_items.extend(item_modified)
-            else:
-                all_items.append(top_item)
-        resource['items'] = all_items
+#        # Group the childs with their parent
+#        for item in resource['details']:
+#            if item.get('parent_item_id'):
+#                child_items.setdefault(item['parent_item_id'], []).append(item)
+#            else:
+#                top_items.append(item)
+#
+#        all_items = []
+#        for top_item in top_items:
+#            if top_item['item_id'] in child_items:
+#                item_modified = self._merge_sub_items(
+#                    top_item['product_type'], top_item,
+#                    child_items[top_item['item_id']])
+#                if not isinstance(item_modified, list):
+#                    item_modified = [item_modified]
+#                all_items.extend(item_modified)
+#            else:
+#                all_items.append(top_item)
+#        resource['items'] = all_items
         return resource
 
     def _merge_sub_items(self, product_type, top_item, child_items):
@@ -758,22 +781,23 @@ class SaleOrderImporter(ShopwareImporter):
 
     def _after_import(self, binding):
         self._link_parent_orders(binding)
-        self._create_payment(binding)
-        if binding.shopware_parent_id:
-            move_comment = self.unit_for(SaleOrderMoveComment)
-            move_comment.move(binding)
+#        self._create_payment(binding)
+#        if binding.shopware_parent_id:
+#            move_comment = self.unit_for(SaleOrderMoveComment)
+#            move_comment.move(binding)
+        return
 
     def _get_shop(self, record):
         """ Return the tax inclusion setting for the appropriate shop """
         shop_binder = self.binder_for('shopware.shop')
-        # we find shop_id in shop_id!
+        # we find shopId in shopId!
         # (http://www.shopwarecommerce.com/bug-tracking/issue?issue=15886)
-        return shop_binder.to_openerp(record['shop_id'], browse=True)
+        return shop_binder.to_openerp(record['shopId'], browse=True)
 
     def _get_shopware_data(self):
         """ Return the raw Shopware data for ``self.shopware_id`` """
         record = super(SaleOrderImporter, self)._get_shopware_data()
-        # sometimes we don't have shop_id...
+        # sometimes we don't have shopId...
         # we fix the record!
         if not record.get('shopId'):
             shop = self._get_shop(record)
@@ -784,157 +808,157 @@ class SaleOrderImporter(ShopwareImporter):
         record = self._clean_shopware_items(record)
         return record
 
-    def _import_addresses(self):
-        record = self.shopware_record
+#    def _import_addresses(self):
+#        record = self.shopware_record
 
-        # Shopware allows to create a sale order not registered as a user
-        is_guest_order = bool(int(record.get('customer_is_guest', 0) or 0))
+#        # Shopware allows to create a sale order not registered as a user
+#        is_guest_order = bool(int(record.get('customer_is_guest', 0) or 0))
+#
+#        # For a guest order or when shopware does not provide customer_id
+#        # on a non-guest order (it happens, Shopware inconsistencies are
+#        # common)
+#        if (is_guest_order or not record.get('customerId')):
+#            shop_binder = self.binder_for('shopware.shop')
+#            oe_shop_id = shop_binder.to_openerp(record['shopId'])
+#
+#            # search an existing partner with the same email
+#            partner = self.env['shopware.res.partner'].search(
+#                [('emailid', '=', record['customer_email']),
+#                 ('shop_id', '=', oe_shop_id)],
+#                limit=1)
+#
+#            # if we have found one, we "fix" the record with the shopware
+#            # customer id
+#            if partner:
+#                shopware = partner.shopware_id
+#                # If there are multiple orders with "customerId is
+#                # null" and "customer_is_guest = 0" which share the same
+#                # customer_email, then we may get a shopware_id that is a
+#                # marker 'guestorder:...' for a guest order (which is
+#                # set below).  This causes a problem with
+#                # "importer.run..." below where the id is cast to int.
+#                if str(shopware).startswith('guestorder:'):
+#                    is_guest_order = True
+#                else:
+#                    record['customerId'] = shopware
+#
+#            # no partner matching, it means that we have to consider it
+#            # as a guest order
+#            else:
+#                is_guest_order = True
+#
+#        partner_binder = self.binder_for('shopware.res.partner')
+#        if is_guest_order:
+#            # ensure that the flag is correct in the record
+#            record['customer_is_guest'] = True
+#            guest_customer_id = 'guestorder:%s' % record['increment_id']
+#            # "fix" the record with a on-purpose built ID so we can found it
+#            # from the mapper
+#            record['customerId'] = guest_customer_id
+#
+#            address = record['billing_address']
+#
+#            customer_group = record.get('customer_group_id')
+#            if customer_group:
+#                self._import_customer_group(customer_group)
+#
+#            customer_record = {
+#                'firstname': address['firstname'],
+#                'middlename': address['middlename'],
+#                'lastname': address['lastname'],
+#                'prefix': address.get('prefix'),
+#                'suffix': address.get('suffix'),
+#                'email': record.get('customer_email'),
+#                'taxvat': record.get('customer_taxvat'),
+#                'group_id': customer_group,
+#                'gender': record.get('customer_gender'),
+#                'shop_id': record['shopId'],
+#                'created_at': normalize_datetime('created_at')(self,
+#                                                               record, ''),
+#                'updated_at': False,
+#                'created_in': False,
+#                'dob': record.get('customer_dob'),
+#                'shop_id': record.get('shopId'),
+#            }
+#            mapper = self.unit_for(PartnerImportMapper,
+#                                   model='shopware.res.partner')
+#            map_record = mapper.map_record(customer_record)
+#            map_record.update(guest_customer=True)
+#            partner_binding = self.env['shopware.res.partner'].create(
+#                map_record.values(for_create=True))
+#            partner_binder.bind(guest_customer_id,
+#                                partner_binding)
+#        else:
 
-        # For a guest order or when shopware does not provide customer_id
-        # on a non-guest order (it happens, Shopware inconsistencies are
-        # common)
-        if (is_guest_order or not record.get('customer_id')):
-            shop_binder = self.binder_for('shopware.shop')
-            oe_shop_id = shop_binder.to_openerp(record['shopId'])
+#        # we always update the customer when importing an order
+#        importer = self.unit_for(ShopwareImporter,
+#                                 model='shopware.res.partner')
+#        importer.run(record['customerId'])
+#        partner_binding = partner_binder.to_openerp(record['customerId'],
+#                                                        browse=True)
+#
+#        partner = partner_binding.openerp_id
+#
+#        # Import of addresses. We just can't rely on the
+#        # ``customer_address_id`` field given by Shopware, because it is
+#        # sometimes empty and sometimes wrong.
+#
+#        # The addresses of the sale order are imported as active=false
+#        # so they are linked with the sale order but they are not displayed
+#        # in the customer form and the searches.
+#
+#        # We import the addresses of the sale order as Active = False
+#        # so they will be available in the documents generated as the
+#        # sale order or the picking, but they won't be available on
+#        # the partner form or the searches. Too many adresses would
+#        # be displayed.
+#        # They are never synchronized.
+#        addresses_defaults = {'parent_id': partner.id,
+#                              'shopware_partner_id': partner_binding.id,
+#                              'email': record.get('customer_email', False),
+#                              'active': False,
+#                              'is_shopware_order_address': True}
+#
+#        addr_mapper = self.unit_for(ImportMapper, model='shopware.address')
+#
+#        def create_address(address_record):
+#            map_record = addr_mapper.map_record(address_record)
+#            map_record.update(addresses_defaults)
+#            address_bind = self.env['shopware.address'].create(
+#                map_record.values(for_create=True,
+#                                  parent_partner=partner))
+#            return address_bind.openerp_id.id
+#
+#        billing_id = create_address(record['billing_address'])
+#
+#        shipping_id = None
+#        if record['shipping_address']:
+#            shipping_id = create_address(record['shipping_address'])
+#
+#        self.partner_id = partner.id
+#        self.partner_invoice_id = billing_id
+#        self.partner_shipping_id = shipping_id or billing_id
 
-            # search an existing partner with the same email
-            partner = self.env['shopware.res.partner'].search(
-                [('emailid', '=', record['customer_email']),
-                 ('shop_id', '=', oe_shop_id)],
-                limit=1)
-
-            # if we have found one, we "fix" the record with the shopware
-            # customer id
-            if partner:
-                shopware = partner.shopware_id
-                # If there are multiple orders with "customer_id is
-                # null" and "customer_is_guest = 0" which share the same
-                # customer_email, then we may get a shopware_id that is a
-                # marker 'guestorder:...' for a guest order (which is
-                # set below).  This causes a problem with
-                # "importer.run..." below where the id is cast to int.
-                if str(shopware).startswith('guestorder:'):
-                    is_guest_order = True
-                else:
-                    record['customer_id'] = shopware
-
-            # no partner matching, it means that we have to consider it
-            # as a guest order
-            else:
-                is_guest_order = True
-
-        partner_binder = self.binder_for('shopware.res.partner')
-        if is_guest_order:
-            # ensure that the flag is correct in the record
-            record['customer_is_guest'] = True
-            guest_customer_id = 'guestorder:%s' % record['increment_id']
-            # "fix" the record with a on-purpose built ID so we can found it
-            # from the mapper
-            record['customer_id'] = guest_customer_id
-
-            address = record['billing_address']
-
-            customer_group = record.get('customer_group_id')
-            if customer_group:
-                self._import_customer_group(customer_group)
-
-            customer_record = {
-                'firstname': address['firstname'],
-                'middlename': address['middlename'],
-                'lastname': address['lastname'],
-                'prefix': address.get('prefix'),
-                'suffix': address.get('suffix'),
-                'email': record.get('customer_email'),
-                'taxvat': record.get('customer_taxvat'),
-                'group_id': customer_group,
-                'gender': record.get('customer_gender'),
-                'shop_id': record['shopId'],
-                'created_at': normalize_datetime('created_at')(self,
-                                                               record, ''),
-                'updated_at': False,
-                'created_in': False,
-                'dob': record.get('customer_dob'),
-                'shop_id': record.get('shopId'),
-            }
-            mapper = self.unit_for(PartnerImportMapper,
-                                   model='shopware.res.partner')
-            map_record = mapper.map_record(customer_record)
-            map_record.update(guest_customer=True)
-            partner_binding = self.env['shopware.res.partner'].create(
-                map_record.values(for_create=True))
-            partner_binder.bind(guest_customer_id,
-                                partner_binding)
-        else:
-
-            # we always update the customer when importing an order
-            importer = self.unit_for(ShopwareImporter,
-                                     model='shopware.res.partner')
-            importer.run(record['customer_id'])
-            partner_binding = partner_binder.to_openerp(record['customer_id'],
-                                                        browse=True)
-
-        partner = partner_binding.openerp_id
-
-        # Import of addresses. We just can't rely on the
-        # ``customer_address_id`` field given by Shopware, because it is
-        # sometimes empty and sometimes wrong.
-
-        # The addresses of the sale order are imported as active=false
-        # so they are linked with the sale order but they are not displayed
-        # in the customer form and the searches.
-
-        # We import the addresses of the sale order as Active = False
-        # so they will be available in the documents generated as the
-        # sale order or the picking, but they won't be available on
-        # the partner form or the searches. Too many adresses would
-        # be displayed.
-        # They are never synchronized.
-        addresses_defaults = {'parent_id': partner.id,
-                              'shopware_partner_id': partner_binding.id,
-                              'email': record.get('customer_email', False),
-                              'active': False,
-                              'is_shopware_order_address': True}
-
-        addr_mapper = self.unit_for(ImportMapper, model='shopware.address')
-
-        def create_address(address_record):
-            map_record = addr_mapper.map_record(address_record)
-            map_record.update(addresses_defaults)
-            address_bind = self.env['shopware.address'].create(
-                map_record.values(for_create=True,
-                                  parent_partner=partner))
-            return address_bind.openerp_id.id
-
-        billing_id = create_address(record['billing_address'])
-
-        shipping_id = None
-        if record['shipping_address']:
-            shipping_id = create_address(record['shipping_address'])
-
-        self.partner_id = partner.id
-        self.partner_invoice_id = billing_id
-        self.partner_shipping_id = shipping_id or billing_id
-
-    def _check_special_fields(self):
-        assert self.partner_id, (
-            "self.partner_id should have been defined "
-            "in SaleOrderImporter._import_addresses")
-        assert self.partner_invoice_id, (
-            "self.partner_id should have been "
-            "defined in SaleOrderImporter._import_addresses")
-        assert self.partner_shipping_id, (
-            "self.partner_id should have been defined "
-            "in SaleOrderImporter._import_addresses")
+#    def _check_special_fields(self):
+#        assert self.partner_id, (
+#            "self.partner_id should have been defined "
+#            "in SaleOrderImporter._import_addresses")
+#        assert self.partner_invoice_id, (
+#            "self.partner_id should have been "
+#            "defined in SaleOrderImporter._import_addresses")
+#        assert self.partner_shipping_id, (
+#            "self.partner_id should have been defined "
+#            "in SaleOrderImporter._import_addresses")
 
     def _create_data(self, map_record, **kwargs):
         shop = self._get_shop(map_record.source)
-        self._check_special_fields()
+        #self._check_special_fields()
         return super(SaleOrderImporter, self)._create_data(
             map_record,
             tax_include=shop.catalog_price_tax_included,
-            partner_id=self.partner_id,
-            partner_invoice_id=self.partner_invoice_id,
-            partner_shipping_id=self.partner_shipping_id,
+#            partner_id=self.partner_id,
+#            partner_invoice_id=self.partner_invoice_id,
+#            partner_shipping_id=self.partner_shipping_id,
             shop=shop,
             **kwargs)
 
@@ -950,42 +974,30 @@ class SaleOrderImporter(ShopwareImporter):
             shop=shop,
             **kwargs)
 
-    def _import_dependencies(self):
-        record = self.shopware_record
-
-        self._import_addresses()
-
-        for line in record.get('items', []):
-            _logger.debug('line: %s', line)
-            if 'product_id' in line:
-                self._import_dependency(line['product_id'],
-                                        'shopware.product.product')
-
-
 SaleOrderImport = SaleOrderImporter  # deprecated
 
 
-@shopware
-class PricelistSaleOrderImportMapper(ImportMapper):
-    """ Mapper for importing the sales order pricelist
-
-    Does nothing by default. Replaced in shopwareerpconnect_pricing.
-    """
-    _model_name = 'shopware.sale.order'
-
-
-@shopware
-class SaleOrderCommentImportMapper(ImportMapper):
-    """ Mapper for importing comments of sales orders.
-
-    Does nothing in the base addons.
-    """
-    _model_name = 'shopware.sale.order'
+#@shopware
+#class PricelistSaleOrderImportMapper(ImportMapper):
+#    """ Mapper for importing the sales order pricelist
+#
+#    Does nothing by default. Replaced in shopwareerpconnect_pricing.
+#    """
+#    _model_name = 'shopware.sale.order'
 
 
-@shopware
-class ShopwareSaleOrderOnChange(SaleOrderOnChange):
-    _model_name = 'shopware.sale.order'
+#@shopware
+#class SaleOrderCommentImportMapper(ImportMapper):
+#    """ Mapper for importing comments of sales orders.
+#
+#    Does nothing in the base addons.
+#    """
+#    _model_name = 'shopware.sale.order'
+
+
+#@shopware
+#class ShopwareSaleOrderOnChange(SaleOrderOnChange):
+#    _model_name = 'shopware.sale.order'
 
 
 @shopware
@@ -994,62 +1006,76 @@ class SaleOrderLineImportMapper(ImportMapper):
 
     direct = [('qty_ordered', 'product_uom_qty'),
               ('qty_ordered', 'product_uos_qty'),
-              ('name', 'name'),
+              ('name', 'articleName'),
               ('item_id', 'shopware_id'),
               ]
 
     @mapping
-    def discount_amount(self, record):
-        discount_value = float(record.get('discount_amount') or 0)
-        if self.options.tax_include:
-            row_total = float(record.get('row_total_incl_tax') or 0)
-        else:
-            row_total = float(record.get('row_total') or 0)
-        discount = 0
-        if discount_value > 0 and row_total > 0:
-            discount = 100 * discount_value / row_total
-        result = {'discount': discount}
-        return result
+    def name(self, record):
+        return {'name': record['articleName']}
+
+    @mapping
+    def quantity(self, record):
+        return {'product_uom_qty': record['quantity']}
+
+    @mapping
+    def price(self, record):
+        return {'price_unit': record['price']}
+
+#    @mapping
+#    def discount_amount(self, record):
+#        discount_value = float(record.get('discount_amount') or 0)
+#        if self.options.tax_include:
+#            row_total = float(record.get('row_total_incl_tax') or 0)
+#        else:
+#            row_total = float(record.get('row_total') or 0)
+#        discount = 0
+#        if discount_value > 0 and row_total > 0:
+#            discount = 100 * discount_value / row_total
+#        result = {'discount': discount}
+#        return result
 
     @mapping
     def product_id(self, record):
         binder = self.binder_for('shopware.product.product')
-        product_id = binder.to_openerp(record['product_id'], unwrap=True)
+        product_id = binder.to_openerp(record['articleId'], unwrap=True)
+        assert record['articleId'] != 0, ("Something wrong with Shopare"
+                                          " Product. Product id is 0 (zero).")
         assert product_id is not None, (
             "product_id %s should have been imported in "
-            "SaleOrderImporter._import_dependencies" % record['product_id'])
+            "SaleOrderImporter._import_dependencies" % record['articleId'])
         return {'product_id': product_id}
 
-    @mapping
-    def product_options(self, record):
-        result = {}
-        ifield = record['product_options']
-        if ifield:
-            import re
-            options_label = []
-            clean = re.sub(r'\w:\w:|\w:\w+;', '', ifield)
-            for each in clean.split('{'):
-                if each.startswith('"label"'):
-                    split_info = each.split(';')
-                    options_label.append('%s: %s [%s]' % (split_info[1],
-                                                          split_info[3],
-                                                          record['sku']))
-            notes = "".join(options_label).replace('""', '\n').replace('"', '')
-            result = {'notes': notes}
-        return result
+#    @mapping
+#    def product_options(self, record):
+#        result = {}
+#        ifield = record['product_options']
+#        if ifield:
+#            import re
+#            options_label = []
+#            clean = re.sub(r'\w:\w:|\w:\w+;', '', ifield)
+#            for each in clean.split('{'):
+#                if each.startswith('"label"'):
+#                    split_info = each.split(';')
+#                    options_label.append('%s: %s [%s]' % (split_info[1],
+#                                                          split_info[3],
+#                                                          record['sku']))
+#            notes = "".join(options_label).replace('""', '\n').replace('"', '')
+#            result = {'notes': notes}
+#        return result
 
-    @mapping
-    def price(self, record):
-        result = {}
-        base_row_total = float(record['base_row_total'] or 0.)
-        base_row_total_incl_tax = float(record['base_row_total_incl_tax'] or
-                                        0.)
-        qty_ordered = float(record['qty_ordered'])
-        if self.options.tax_include:
-            result['price_unit'] = base_row_total_incl_tax / qty_ordered
-        else:
-            result['price_unit'] = base_row_total / qty_ordered
-        return result
+#    @mapping
+#    def price(self, record):
+#        result = {}
+#        base_row_total = float(record['base_row_total'] or 0.)
+#        base_row_total_incl_tax = float(record['base_row_total_incl_tax'] or
+#                                        0.)
+#        qty_ordered = float(record['qty_ordered'])
+#        if self.options.tax_include:
+#            result['price_unit'] = base_row_total_incl_tax / qty_ordered
+#        else:
+#            result['price_unit'] = base_row_total / qty_ordered
+#        return result
 
 
 @shopware
